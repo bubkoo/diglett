@@ -12,6 +12,16 @@
         return '[object Array]' === toString.call(obj);
     };
 
+    var isFunction = function (value) {
+        return typeof value === 'function';
+    };
+    // fallback for older versions of Chrome and Safari
+    if (isFunction(/x/)) {
+        isFunction = function (value) {
+            return typeof value === 'function' && toString.call(value) === '[object Function]';
+        };
+    }
+
     var forEach = function (data, callback) {
         var i,
             l;
@@ -119,25 +129,43 @@
                 var start = grammar[0];
                 var command = grammar.substr(1);
                 switch (start) {
-                    case '#':
-                    case '@':
-                        // 开始
-                        this.commands[command].call();
-                        break;
-                    case '^':
+                    case '#':// #if #elseif #each #else
+                    case '@':// @if @elseif @each @else
+                    case '^':// ^if ^else
+                        // #if arg
+                        // #if arg | filter1:param | filter2
+                        // #each items
+                        // #each items as $item $index
+                        // #each items | filter:param
+                        // #each items | filter:param as $item $index
 
+                        var params = command.split(/[\s]+/);
+                        command = params.shift();
+                        command += '^' === start ? start : '';
+                        command = command.toLowerCase();
+                        if (this.commands.hasOwnProperty(command)) {
+                            var fn = this.commands[command];
+                            if (isFunction(fn)) {
+                                return fn.call(this.commands, params);
+                            }
+                        }
                         break;
                     case '/':
                         // 结束或双括号转义
                         if ('/' === grammar[1]) {
-
+                            return '{{' + grammar.substr(2) + '}}';
+                        } else {
+                            var params = command.split(/[\s]+/);
+                            return '}';
                         }
                         break;
                     case '!':
                         // 注释
+                        return '';
                         break;
                     default :
                         // 普通变量
+                        return grammar;
                         break;
                 }
             }
@@ -168,12 +196,12 @@
     };
 
     diglett.compile = function (tpl) {
-        try {
-            new compiler(tpl).compile()
-        }
-        catch (e) {
+//        try {
+        new compiler(tpl).compile()
+//        }
+//        catch (e) {
 
-        }
+//        }
     };
 
     diglett.render = function () {
@@ -207,17 +235,29 @@
 
     (function (commands) {
         var nativeCommands = {
-            'if': function () {
+            'if': function (params) {
+                return 'if(' + params.join(' ') + '){';
             },
-            'elseif': function () {
+            '^if': function (params) {
+                return 'if(!(' + params.join(' ') + ')){';
             },
-            'else': function () {
+            'elseif': function (params) {
+                return 'else if(' + params.join(' ') + '){';
             },
-            'each': function () {
+            'else': function (params) {
+                return '{';
             },
-            'with': function () {
+            'each': function (params) {
+                return '~function() {}();'
+            },
+            'endeach': function () {
+                return ''
+            },
+            'with': function (params) {
+                return '~function() {}();'
             }
         };
+        nativeCommands['^else'] = nativeCommands['elseif'];
         merge(commands, nativeCommands);
     })(diglett.commands);
 
