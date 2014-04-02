@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+    <title></title>
+    <script src="../src/diglett.js"></script>
+</head>
+<body>
+<div id="content"></div>
+<script id="test" type="text/html">
+    {{
+
+    #if isAdmin
+
+    }}
+
+    <h1>{{ title }}</h1>
+    <ul>
+        {{#each list }}
+        <li>索引 {{ $index + 1 }} ：{{ $value }}</li>
+        {{/each}}
+    </ul>
+
+    {{/if}}
+</script>
+
+<script>
+    var data = {
+        title: '基本例子',
+        isAdmin: true,
+        list: ['文艺', '博客', '摄影', '电影', '民谣', '旅行', '吉他']
+    };
+    var html = diglett.compile(document.getElementById('test').innerHTML, data);
+
+</script>
+</body>
+</html>
