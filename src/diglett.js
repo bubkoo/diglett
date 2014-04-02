@@ -37,6 +37,18 @@
         return str;
     };
 
+    var merge = function (target, source) {
+        for (var key in source) {
+            if (source.hasOwnProperty(key)) {
+                // 在 iPhone 1 代等设备的 Safari 中，prototype 也会被枚举出来，需排除
+                if (key !== 'prototype') {
+                    target[key] = source[key];
+                }
+            }
+        }
+        return target;
+    };
+
     var compiler = function (tpl, options) {
         this.tpl = tpl;
         this.openTag = diglett.options.openTag;
@@ -45,6 +57,8 @@
         this.debug = true;
         this.uglify = false;
         this.buffer = '';
+        this.commands = diglett.commands;
+        this.filters = diglett.filters;
 
 
         // 在 IE6-8 下，数组 push 方法拼接字符串会比 += 快
@@ -103,10 +117,15 @@
             grammar = trim(grammar);
             if (grammar) {
                 var start = grammar[0];
+                var command = grammar.substr(1);
                 switch (start) {
                     case '#':
                     case '@':
                         // 开始
+                        this.commands[command].call();
+                        break;
+                    case '^':
+
                         break;
                     case '/':
                         // 结束或双括号转义
@@ -133,6 +152,8 @@
     diglett.version = '0.0.6';
 
     var cache = diglett.cache = {};
+    var commands = diglett.commands = {};
+    var filters = diglett.filters = {};
 
     diglett.options = {
         openTag: '{{',
@@ -160,17 +181,57 @@
     };
 
     diglett.addCommand = function (name, command) {
+        if (!commands.hasOwnProperty(name)) {
+            commands[name] = command;
+        }
     };
 
     diglett.removeCommand = function (name) {
+        if (commands.hasOwnProperty(name)) {
+            delete commands[name];
+        }
     };
 
     diglett.addFilter = function (name, filter) {
+        if (!filters.hasOwnProperty(name)) {
+            filters[name] = filter;
+        }
     };
 
     diglett.removeFilter = function (name) {
+        if (filters.hasOwnProperty(name)) {
+            delete filters[name];
+        }
     };
 
+
+    (function (commands) {
+        var nativeCommands = {
+            'if': function () {
+            },
+            'elseif': function () {
+            },
+            'else': function () {
+            },
+            'each': function () {
+            },
+            'with': function () {
+            }
+        };
+        merge(commands, nativeCommands);
+    })(diglett.commands);
+
+    (function (filters) {
+        var nativeFilters = {
+            'html': function () {
+            },
+            'money': function () {
+            },
+            'datetime': function () {
+            }
+        };
+        merge(filters, nativeFilters);
+    })(diglett.filters);
 
     if (typeof define === 'function') {
         // RequireJS && SeaJS
