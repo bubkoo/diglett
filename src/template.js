@@ -6,25 +6,22 @@
     function Template(options) {
         this.options = options;
 
-        var openTag = this.options.openTag,
-            closeTag = this.options.closeTag;
-
-        this.rEachStart = new RegExp(openTag + '\s*[#@]each\s+([\w\.]*?)\s+(.*?)\s*' + closeTag, 'igm');
-        this.rEachEnd = new RegExp(openTag + '\s*\/each\s*' + closeTag, 'igm');
-        this.rIfStart = new RegExp(openTag + '\s*[#@]if\s+(.*?)\s*' + closeTag, 'igm');
-        this.rIfEnd = new RegExp(openTag + '\s*\/if\s*' + closeTag, 'igm');
-        this.rElse = new RegExp(openTag + '\s*[#@]else\s*' + closeTag, 'igm');
-        this.rElseIf = new RegExp(openTag + '\s*[#@]else\s*if\s+(.*?)\s*' + closeTag, 'igm');
-        this.rInterpolate = new RegExp(openTag + '\s*([\s\S]+?)\s*' + closeTag, 'igm');
-        this.rComment = new RegExp(openTag + '\s*!.*\s*' + closeTag, 'igm');
-        this.rInline = new RegExp(openTag + '\s*\/\/(.*)\s*' + closeTag, 'igm');
+        this.rEachStart = /{{\s*[#@]each\s+(.*?)\s*as?\s*(.*?)\s*(.*?)\s*}}/igm;
+        this.rEachEnd = /{{\s*\/each\s*}}/igm;
+        this.rIfStart = /{{\s*[#@]if\s+(.*?)\s*}}/igm;
+        this.rIfEnd = /{{\s*\/if\s*}}/igm;
+        this.rElse = /{{\s*[#@]else\s*}}/igm;
+        this.rElseIf = /{{\s*[#@]else\s*if\s+(.*?)\s*}}/igm;
+        this.rInterpolate = /{{\s*((?!\/|#|@|\/\/|!--)[\s\S]+?)\s*}}/igm;
+        this.rComment = /{{!--[\s\S]*--}}\s*/igm;
+        this.rInline = /{{\s*\/\/(.*)\s*}}/igm;
     }
 
     Template.prototype = {
         constructor: Template,
         _lexer: function (source) {
-            var openTag = this.options.openTag,
-                closeTag = this.options.closeTag;
+            var variables = [],
+                declare;
 
             var indexOf = function (array, item) {
                 if (Array.prototype.indexOf) {
@@ -43,12 +40,87 @@
                 return -1;
             };
 
+            var variableAnalyze = function (input, statement) {
+                statement = statement.match(/\w+/igm)[0];
 
+                if (indexOf(variables, statement) === -1) {
+                    variables.push(statement);
+                }
+            }
+
+            source.replace(this.rEachStart, variableAnalyze).
+                replace(this.rIfStart, variableAnalyze).
+                replace(this.rElseIf, variableAnalyze).
+                replace(this.rInterpolate, variableAnalyze);
+
+            var i,
+                len = variables.length;
+            if (len > 0) {
+                declare = 'var ';
+                for (i = 0; i < len; i++) {
+                    declare += variables[i] + '=__.' + variables[i] + ',';
+                }
+            }
+            if (declare) {
+                return '<%' + declare.substr(0, declare.length - 1) + '; %>';
+            } else {
+                return '';
+            }
+        },
+        _unshell: function (source) {
+            var counter = 0;
+            source = source
+                // each expression
+                // {{#each items}} // default key is $index, default value
+                // {{#each items as key,}}
+                .replace(this.rEachStart, function (input, _name, alias, key) {
+                    var alias = alias || 'value', key = key && key.substr(1);
+                    var _iterate = 'i' + _counter++;
+                    return '<% for(var ' + _iterate + '=0, l' + _iterate + '=' + _name + '.length;' + _iterate + '<l' + _iterate + ';' + _iterate + '++) {' +
+                        'var ' + alias + '=' + _name + '[' + _iterate + '];' +
+                        (key ? ('var ' + key + '=' + _iterate + ';') : '') +
+                        ' %>';
+                })
+                .replace(this.rEachEnd, '<% } %>')
+
+                // if expression
+                .replace(this.rIfStart, function (input, condition) {
+                    return '<% if(' + condition + ') { %>';
+                })
+                .replace(this.rIfEnd, '<% } %>')
+
+                // else expression
+                .replace(this.rElse, function (input) {
+                    return '<% } else { %>';
+                })
+
+                // else if expression
+                .replace(this.rElseIf, function (input, condition) {
+                    return '<% } else if(' + condition + ') { %>';
+                })
+
+                // interpolate
+                .replace(this.rInterpolate, function (input, variable) {
+                    return variable;
+                })
+
+                // clean up comments
+                .replace(this.rComment, '')
+
+                // inline
+                .replace(this.rInline, function (input, text) {
+                    // %7B - {
+                    // %7D - }
+                    return '%7B%7B' + text + '%7D%7D';
+                })
+            ;
+            return source;
         },
         parse: function (source) {
             if (this.options.loose) {
-
+                source = this._lexer(source) + source;
             }
+            source = this._unshell(source);
             return this;
         }
     };
@@ -68,8 +140,6 @@
     var filters = diglett.filter = {};
 
     diglett.options = {
-        'openTag': '{{',
-        'closeTag': '}}',
         'loose': true,  // if false then use native JavaScript syntax.
         'cache': true,  // cache the compiled template
         'debug': true,
@@ -82,10 +152,10 @@
         // source is element's ID, like this #nodeId
         var regId = /^\s*#([\w:\-\.]+)\s*$/igm;
         if (source.match(regId)) {
-            source.replace(regId, function ($, $id) {
+            source.replace(regId, function (input, id) {
                 var doc = document,
-                    ele = doc && doc.getElementById($id);
-                source = ele ? (ele.value || ele.innerHTML) : $;
+                    ele = doc && doc.getElementById(id);
+                source = ele ? (ele.value || ele.innerHTML) : input;
             });
         }
 
