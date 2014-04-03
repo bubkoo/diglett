@@ -67,6 +67,7 @@
         this.debug = true;
         this.uglify = false;
         this.buffer = '';
+        this.declareList = {};
         this.commands = diglett.commands;
         this.filters = diglett.filters;
 
@@ -76,14 +77,19 @@
         // 在 v8 引擎中，使用 += 方式比数组拼接快 4.7 倍
         var mordern = ''.trim;
         this.out = mordern
-            ? ["$out='';", "$out+=", ";", "$out"]
-            : ["$out=[];", "$out.push(", ");", "$out.join('')"];
+            ? ["__out__ = '';", "__out__ += ", ";", "__out__"]
+            : ["__out__ = [];", "__out__.push(", ");", "__out__.join('')"];
     }
 
     compiler.prototype = {
         constructor: compiler,
         compile: function () {
-            var that = this;
+            var that = this,
+                fnBody,
+                declare = '\'use strict\';\n'
+                    + 'var __ = __ || {},\n'
+                    + '__filters = __.__filters || {},\n';
+
             forEach(this.tpl.split(this.openTag), function (section) {
                 var sections = section.split(that.closeTag),
                     p1 = sections[0],
@@ -96,6 +102,16 @@
                     that.buffer += that.parser(p2);
                 }
             });
+
+            for (var key in this.declareList) {
+                if (this.declareList.hasOwnProperty(key)) {
+                    declare += key + ' = __.' + key + ',\n';
+                }
+            }
+            declare += this.out[0] + '\n\n';
+            fnBody = declare + that.buffer + 'return ' + this.out[3] + ';';
+
+            console.log(fnBody);
         },
         compress: function (html) {
             // 压缩 HTML，删除多余的空白和注释
@@ -125,49 +141,80 @@
         },
         lexer: function (grammar) {
             grammar = trim(grammar);
-            if (grammar) {
-                var start = grammar[0];
-                var command = grammar.substr(1);
-                switch (start) {
-                    case '#':// #if #elseif #each #else
-                    case '@':// @if @elseif @each @else
-                    case '^':// ^if ^else
-                        // #if arg
-                        // #if arg | filter1:param | filter2
-                        // #each items
-                        // #each items as $item $index
-                        // #each items | filter:param
-                        // #each items | filter:param as $item $index
+            if (!grammar) {
+                return;
+            }
+            var start = grammar[0],
+                command = grammar.substr(1),
+                params = command.split(/[\s]+/);
+            command = params.shift();
+            command += '^' === start ? start : '';
+            command = command.toLowerCase();
+            switch (start) {
+                case '#':// #if #elseif #each #else
+                case '@':// @if @elseif @each @else
+                case '^':// ^if ^else
+                    // #if arg
+                    // #if arg | filter1:param | filter2
+                    // #each items
+                    // #each items as $item $index
+                    // #each items | filter:param | filter2 as $item $index
+                    // #each items | filter:param as $item $index
 
-                        var params = command.split(/[\s]+/);
-                        command = params.shift();
-                        command += '^' === start ? start : '';
-                        command = command.toLowerCase();
+                    if (!this.declareList.hasOwnProperty(params[0])) {
+                        this.declareList[params[0]] = 1;
+                    }
+                    if (this.commands.hasOwnProperty(command)) {
+                        var fn = this.commands[command];
+                        if (isFunction(fn)) {
+                            return fn.call(this.commands, params);
+                        }
+                    }
+                    break;
+                case '/':
+                    // 结束或双括号转义
+                    if ('/' === grammar[1]) {
+                        return '{{' + grammar.substr(2) + '}}';
+                    } else {
+                        command = ('end' + command).toLowerCase();
                         if (this.commands.hasOwnProperty(command)) {
                             var fn = this.commands[command];
                             if (isFunction(fn)) {
                                 return fn.call(this.commands, params);
                             }
-                        }
-                        break;
-                    case '/':
-                        // 结束或双括号转义
-                        if ('/' === grammar[1]) {
-                            return '{{' + grammar.substr(2) + '}}';
                         } else {
-                            var params = command.split(/[\s]+/);
                             return '}';
                         }
-                        break;
-                    case '!':
-                        // 注释
-                        return '';
-                        break;
-                    default :
-                        // 普通变量
-                        return grammar;
-                        break;
-                }
+                    }
+                    break;
+                case '!':
+                    // 注释
+                    return '';
+                    break;
+                default :
+                    // 普通变量
+                    // data | filter1:param | filter2
+
+                    params = grammar.split(/\s*\|\s*/);
+                    grammar = params[0];
+                    if (!this.declareList.hasOwnProperty(grammar)) {
+                        this.declareList[grammar] = 1;
+                    }
+
+                    var i,
+                        len = params.length,
+                        filter,
+                        filterArgs;
+                    if (len > 1) {
+                        for (i = 1; i < len; i++) {
+                            filterArgs = params[i].split(/\s*:\*/);
+                            filter = filterArgs.shift();
+                            filterArgs.unshift(grammar)
+                            grammar = '__filters[' + filter + '] ? __filters[' + filter + '].apply(null,' + filterArgs + ') : ' + grammar;
+                        }
+                    }
+                    return this.out[1] + grammar + this.out[2] + '\n';
+                    break;
             }
         }
     };
@@ -248,10 +295,12 @@
                 return '{';
             },
             'each': function (params) {
-                return '~function() {}();'
+                var buffer = '~function(){';
+
+                return buffer;
             },
             'endeach': function () {
-                return ''
+                return '}();'
             },
             'with': function (params) {
                 return '~function() {}();'
