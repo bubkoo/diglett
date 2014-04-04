@@ -6,20 +6,30 @@
     function Template(options) {
         this.options = options;
         this.filters = options.filters || {};
-
-        this.rEachStart = /{{\s*[#@]each\s+(\S+)(?:\s+as\s+)?(\S*)?\s*(\S*)?\s*}}/igm;
-        this.rEachEnd = /{{\s*\/each\s*}}/igm;
-        this.rIfStart = /{{\s*[#@]if\s+(.*?)\s*}}/igm;
-        this.rIfEnd = /{{\s*\/if\s*}}/igm;
-        this.rElse = /{{\s*[#@]else\s*}}/igm;
-        this.rElseIf = /{{\s*[#@]else\s*if\s+(.*?)\s*}}/igm;
-        this.rInterpolate = /{{\s*((?!\/|#|@|\/\/|!--)[\s\S]+?)\s*}}/igm;
-        this.rComment = /{{!--[\s\S]*--}}\s*/igm;
-        this.rInline = /{{\s*\/\/(.*)\s*}}/igm;
     }
 
     Template.prototype = {
         constructor: Template,
+        method: {
+            isArray: Array.isArray || function (obj) {
+                return '[object Array]' === Object.prototype.toString.call(obj);
+            },
+            each: function (data, callback) {
+                var i,
+                    l;
+                if (this.method.isArray(data)) {
+                    for (i = 0, l = data.length; i < l; i++) {
+                        callback.call(data, data[i], i, data);
+                    }
+                } else {
+                    for (i in data) {
+                        if (data.hasOwnProperty(i)) {
+                            callback.call(data, data[i], i);
+                        }
+                    }
+                }
+            }
+        },
         _lexer: function (source) {
             var variables = [],
                 declare;
@@ -81,12 +91,10 @@
                     var iterate = 'i' + counter++;
 
                     return '<% ~function() {' +
-                        'var __isArray = Object.prototype.toString.call(' + data + ') === \'[object Array]\' , ' + item + ' , ' + key + ';' +
                         'for(var ' + iterate + ' in ' + data + ') {' +
                         'if(' + data + '.hasOwnProperty(' + iterate + ')) {' +
-                        item + ' = ' + data + '[' + iterate + '];' +
-                        key + ' = ' + iterate + ';' +
-                        '__isArray && (' + key + ' = parseInt(' + key + '));' +
+                        'var ' + item + '=' + data + '[' + iterate + '];' +
+                        'var ' + key + '=' + iterate + ';' +
                         ' %>';
                 })
                 .replace(this.rEachEnd, '<% }}}(); %>')
@@ -109,22 +117,7 @@
 
                 // interpolate
                 .replace(this.rInterpolate, function (input, variable) {
-                    var filters = variable.split(/\s*\|\s*/g),
-                        content = filters.shift(),
-                        filter,
-                        args,
-                        buffer,
-                        i,
-                        len = filters.length;
-                    if (len) {
-                        for (i = 0; i < len; i++) {
-                            args = filters[i].split(/\s*:\s*/g);
-                            filter = args.shift();
-                            buffer = content+(args.length?',"'+args.join('","')+'"':'');
-                            content = '__filters["' + filter + '"].call(this,' + buffer +')';
-                        }
-                    }
-                    return '<%=' + content + '%>';
+                    return '<%=' + variable + '%>';
                 })
 
                 // clean up comments
@@ -132,27 +125,26 @@
 
                 // inline
                 .replace(this.rInline, function (input, text) {
-                    return '{{' + text + '}}';
+                    // %7B - {
+                    // %7D - }
+                    return '%7B%7B' + text + '%7D%7D';
                 })
             ;
             return source;
         },
         _toNative: function (source) {
-            var buffer = "'use strict';"; // use strict mode
-            buffer += "var __ = __ || {};";
-            buffer += "var __filters = __filters || {};";
-            buffer += "var __out='';__out+='";
-            if (this.options.uglify !== false) {
+            var buffer = '';
+            if (this.options.uglify != false) {
                 buffer += source
                     .replace(/\\/g, '\\\\')
-                    .replace(/[\r\t\n\s]+/g, ' ')
+                    .replace(/[\r\t\n]/g, ' ')
                     .replace(/'(?=[^%]*%>)/g, '\t')
                     .split("'").join("\\'")
                     .split("\t").join("'")
-                    .replace(/<%=(.+?)%>/g, "';__out+=$1;__out+='")
+                    .replace(/<%=(.+?)%>/g, "';_out+=$1;_out+='")
                     .split("<%").join("';")
-                    .split("%>").join("__out+='") +
-                    "';return __out;";
+                    .split("%>").join("_out+='") +
+                    "';return _out;";
             } else {
                 buffer += source
                     .replace(/\\/g, "\\\\")
@@ -162,19 +154,84 @@
                     .replace(/'(?=[^%]*%>)/g, "\t")
                     .split("'").join("\\'")
                     .split("\t").join("'")
-                    .replace(/<%=(.+?)%>/g, "';__out+=$1;__out+='")
+                    .replace(/<%=(.+?)%>/g, "';_out+=$1;_out+='")
                     .split("<%").join("';")
-                    .split("%>").join("__out+='") +
-                    "';return __out.replace(/[\\r\\n]\\s+[\\r\\n]/g, '\\r\\n');";
+                    .split("%>").join("_out+='") +
+                    "';return _out.replace(/[\\r\\n]\\s+[\\r\\n]/g, '\\r\\n');";
             }
             return buffer;
         },
         parse: function (source) {
-            source = this._lexer(source) + source;
+            var
+                that = this,
+                mordern = ''.trim,
+                openTag = that.options.openTag,
+                closeTag = that.options.closeTag,
+                output = mordern
+                    ? ["__out__ = '';", "__out__ += ", ";", "__out__"]
+                    : ["__out__ = [];", "__out__.push(", ");", "__out__.join('')"]
+                ,
+                buffer = '',
+
+                trim = function (str) {
+                    str = str.replace(/^\s+/g, '');
+                    for (var i = str.length - 1; i >= 0; i--) {
+                        if (/\S/.test(str.charAt(i))) {
+                            str = str.substring(0, i + 1);
+                            break;
+                        }
+                    }
+                    return str;
+                },
+
+                stringify = function (html) {
+                    return "'" + html
+                        // escape the single quotation marks and backslash
+                        .replace(/('|\\)/g, '\\$1')
+                        // escape the newline character(windows + linux)
+                        .replace(/\r/g, '\\r')
+                        .replace(/\n/g, '\\n') + "'";
+                },
+
+                handleHTML = function (html) {
+                    if (that.uglify && html) {
+                        // compress html
+                        html = html
+                            // remove additional line and blank space
+                            .replace(/[\n\r\t\s]+/g, ' ')
+                            // remove html comment
+                            .replace(/<!--.*?-->/g, '');
+                    }
+                    return output[1] + stringify(html) + output[2] + '\n';
+                },
+
+                unshell = function (lexer) {
+                    lexer = trim(lexer);
+                    if (!lexer) {
+                        return '';
+                    }
+                };
+
+            this.method.each(source.split(openTag), function (section) {
+                var sections = section.split(that.closeTag),
+                    p1 = sections[0],
+                    p2 = sections[1];
+                if (1 === sections.length) {
+                    buffer += handleHTML(p1);
+                } else {
+                    p1 && (buffer += unshell(p1));
+                    buffer += handleHTML(p2);
+                }
+            });
+
+
+            if (this.options.loose) {
+                source = this._lexer(source) + source;
+            }
             source = this._unshell(source);
             source = this._toNative(source);
 
-            this._render = new Function('__, __filters', source);
+            this._render = new Function('__, __filter', source);
             var that = this;
             this.render = function (data, filters) {
                 filters = merge(filters, that.filters);
@@ -197,25 +254,11 @@
     diglett.version = '0.0.6';
 
     diglett.cache = {};
-    diglett.method = {};
-    diglett.filters = {
-        'html': function (content) {
-            var escapeMap = {
-                '<': '&#60;',
-                '>': '&#62;',
-                '"': '&#34;',
-                '\'': '&#39;',
-                '&': '&#38;'
-            };
-            return new String(content)
-                .replace(/&(?![\w#]+;)|[<>"']/g, function (s) {
-                    s = escapeMap[s];
-                    return  s || '&#38;';
-                });
-        }
-    };
+    diglett.filters = {};
 
     diglett.options = {
+        'openTag': '{{',
+        'closeTag': '}}',
         'cache': true,  // cache the compiled template
         'debug': true,
         'uglify': true  // compress HTML output, remove line break and additional blank space.
@@ -249,9 +292,8 @@
     };
 
     diglett.render = function (source, data, options) {
-        return  this.compile(source, options).render(data);
+        this.compile(source, options);
     };
-
 
     function merge(target, source) {
         var key;
@@ -285,4 +327,5 @@
         global.diglett = diglett;
     }
 
-})(this);
+})
+    (this);
