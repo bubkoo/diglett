@@ -26,7 +26,7 @@
     <h2>{{ title }}</h2>
     <ul>
         {{ #each list as $value $index}}
-        <li>索引 {{ ($index + 1) }} ：{{ $value }}</li>
+        <li>索引 {{ $index + 1 }} ：{{ $value }}</li>
         {{/each}}
     </ul>
     {{/if}}
@@ -39,7 +39,7 @@
             <h3>类别：{{ $index }}</h3>
             <ul>
                 {{ #each $value as $item $idx}}
-                <li> {{ ($idx + 1) }} ：{{ $item }}</li>
+                <li> {{ $idx + 1 }} ：{{ $item }}</li>
                 {{/each}}
             </ul>
         </li>
@@ -69,6 +69,56 @@
 
 </script>
 <script>
+    function anonymous(__, __method, __filter) {
+        'use strict';
+        __ = __ || {};
+        __filter = __filter || {};
+        __method = __method || {};
+        var __out = '';
+        __out += '';
+        var list = __.list,
+                arrs = __.arrs,
+                $value = __.$value,
+                isAdmin = __.isAdmin,
+                title = __.title,
+                $index = __.$index,
+                $idx = __.$idx,
+                $item = __.$item,
+                escape = __.escape;
+
+        __out += '     ';
+        if (isAdmin) {
+            __out += '            {{ 内联显示}}      <h2>';
+            __out += title;
+            __out += '</h2>     <ul>         ';
+            __method["each"](list, function ($data, $value, $index) {
+                __out += '         <li>索引 ';
+                __out += $index + 1;
+                __out += ' ：';
+                __out += $value;
+                __out += '</li>         ';
+            });
+            __out += '     </ul>     ';
+        }
+        __out += '     <h2>         嵌套     </h2>     <ul>         ';
+        __method["each"](arrs, function ($data, $value, $index) {
+            __out += '         <li>             <h3>类别：';
+            __out += $index;
+            __out += '</h3>             <ul>                 ';
+            __method["each"]($value, function ($data, $item, $idx) {
+                __out += '                 <li> ';
+                __out += $idx + 1;
+                __out += ' ：';
+                __out += $item;
+                __out += '</li>                 ';
+            });
+            __out += '             </ul>         </li>         ';
+        });
+        __out += '     </ul>     <h2>         HTML     </h2>     ';
+        __out += __filter["html"].call(this, escape, "param");
+        __out += ' ';
+        return __out.replace(/[\r\n]\s+[\r\n]/g, '\r\n');
+    }
 </script>
 </body>
 </html>

@@ -22,15 +22,15 @@
     Template.prototype = {
         constructor: Template,
         method: {
-            isArray: Array.isArray || function (obj) {
-                return '[object Array]' === Object.prototype.toString.call(obj);
-            },
             each: function (data, callback) {
                 var i,
-                    l;
-                if (this.isArray(data)) {
+                    l,
+                    isArray = Array.isArray || function (obj) {
+                        return '[object Array]' === Object.prototype.toString.call(obj);
+                    };
+                if (isArray(data)) {
                     for (i = 0, l = data.length; i < l; i++) {
-                        callback.call(data, data[i], i, data);
+                        callback.call(data, data[i], i);
                     }
                 } else {
                     for (i in data) {
@@ -41,26 +41,35 @@
                 }
             }
         },
+        filter: {
+            'html': function (content) {
+                var escapeMap = {
+                    '<': '&#60;',
+                    '>': '&#62;',
+                    '"': '&#34;',
+                    '\'': '&#39;',
+                    '&': '&#38;'
+                };
+                return new String(content)
+                    .replace(/&(?![\w#]+;)|[<>"']/g, function (s) {
+                        s = escapeMap[s];
+                        return  s || '&#38;';
+                    });
+            }
+        },
         _unshell: function (source) {
-            var counter = 0;
+            var that = this;
             source = source
                 // each expression
                 // {{#each items}} // default key is $index, default $value
                 // {{#each items as $value}}
                 // {{#each items as $value $index}}
-                .replace(this.rEachStart, function (input, data, item, key) {
-                    item = item || '$value';
+                .replace(this.rEachStart, function (input, data, value, key) {
+                    value = value || '$value';
                     key = key || '$index';
-                    var iterate = 'i' + counter++;
-
-                    return '<% ~function() {' +
-                        'for(var ' + iterate + ' in ' + data + ') {' +
-                        'if(' + data + '.hasOwnProperty(' + iterate + ')) {' +
-                        'var ' + item + '=' + data + '[' + iterate + '];' +
-                        'var ' + key + '=' + iterate + ';' +
-                        ' %>';
+                    return '<% __method["each"](' + data + ', function(' + value + ', ' + key + '){ %>';
                 })
-                .replace(this.rEachEnd, '<% }}}(); %>')
+                .replace(this.rEachEnd, '<% }); %>')
 
                 // if expression
                 .replace(this.rIfStart, function (input, condition) {
@@ -69,7 +78,7 @@
                 .replace(this.rIfEnd, '<% } %>')
 
                 // else expression
-                .replace(this.rElse, function (input) {
+                .replace(this.rElse, function () {
                     return '<% } else { %>';
                 })
 
@@ -80,7 +89,22 @@
 
                 // interpolate
                 .replace(this.rInterpolate, function (input, variable) {
-                    return '<%=' + variable + '%>';
+                    var filters = variable.split(/\s*\|\s*/g),
+                        content = filters.shift(),
+                        filter,
+                        args,
+                        buffer,
+                        i,
+                        len = filters.length;
+                    if (len) {
+                        for (i = 0; i < len; i++) {
+                            args = filters[i].split(/\s*:\s*/g);
+                            filter = args.shift();
+                            buffer = content + (args.length ? ',"' + args.join('","') + '"' : '');
+                            content = '__filter["' + filter + '"].call(this,' + buffer + ')';
+                        }
+                    }
+                    return '<%=' + content + '%>';
                 })
 
                 // clean up comments
@@ -88,40 +112,27 @@
 
                 // inline
                 .replace(this.rInline, function (input, text) {
-                    // %7B - {
-                    // %7D - }
-                    return '%7B%7B' + text + '%7D%7D';
+                    return that.options.openTag + text + that.options.closeTag;
                 })
             ;
             return source;
         },
         _toNative: function (source) {
-            var buffer = '';
-            if (this.options.uglify != false) {
-                buffer += source
-                    .replace(/\\/g, '\\\\')
-                    .replace(/[\r\t\n]/g, ' ')
-                    .replace(/'(?=[^%]*%>)/g, '\t')
-                    .split("'").join("\\'")
-                    .split("\t").join("'")
-                    .replace(/<%=(.+?)%>/g, "';_out+=$1;_out+='")
-                    .split("<%").join("';")
-                    .split("%>").join("_out+='") +
-                    "';return _out;";
-            } else {
-                buffer += source
-                    .replace(/\\/g, "\\\\")
-                    .replace(/[\r]/g, "\\r")
-                    .replace(/[\t]/g, "\\t")
-                    .replace(/[\n]/g, "\\n")
-                    .replace(/'(?=[^%]*%>)/g, "\t")
-                    .split("'").join("\\'")
-                    .split("\t").join("'")
-                    .replace(/<%=(.+?)%>/g, "';_out+=$1;_out+='")
-                    .split("<%").join("';")
-                    .split("%>").join("_out+='") +
-                    "';return _out.replace(/[\\r\\n]\\s+[\\r\\n]/g, '\\r\\n');";
-            }
+            var buffer = "'use strict';"; // use strict mode
+            buffer += "__ = __ || {};";
+            buffer += "__filter = __filter || {};";
+            buffer += "__method = __method || {};";
+            buffer += "var __out='';__out+='";
+            buffer += source
+                .replace(/\\/g, '\\\\')
+                .replace(/[\r\t\n]/g, ' ')
+                .replace(/'(?=[^%]*%>)/g, '\t')
+                .split("'").join("\\'")
+                .split("\t").join("'")
+                .replace(/<%=(.+?)%>/g, "';__out+=$1; __out+='")
+                .split('<%').join("';")
+                .split('%>').join("__out+='") +
+                "';return __out.replace(/[\\r\\n]\\s+[\\r\\n]/g, '\\r\\n');";
             return buffer;
         },
         _getVariable: function (source) {
@@ -163,19 +174,36 @@
                     return -1;
                 },
 
-                variableAnalyze = function ($, statement) {
-                    statement = statement.match(/\w+/igm)[0];
-                    if (indexOf(variables, statement) === -1) {
-                        variables.push(statement);
+                variableAnalyze = function (input, variable) {
+                    // variable name should start with A-Z, a-z, _ or $
+                    variable = variable.match(/[A-Za-z_$][A-Za-z0-9_$]+/igm)[0];
+                    if (variable && indexOf(variables, variable) === -1) {
+                        variables.push(variable);
                     }
                 };
 
             source.replace(this.rEachStart, variableAnalyze).
                 replace(this.rIfStart, variableAnalyze).
                 replace(this.rElseIf, variableAnalyze).
-                replace(this.rInterpolate, variableAnalyze).
-                // + - * / % ! ? | ^ & ~ < > = , ( ) [ ]
-                replace(/[\+\-\*\/%!\?\|\^&~<>=,\(\)\[\]]\s*([A-Za-z_]+)/igm, variableAnalyze);
+                replace(this.rInterpolate, function (input, statement) {
+                    // filter
+                    statement = statement.split('|')[0];
+                    // match variables
+                    var match = statement.match(/[A-Za-z_$][A-Za-z0-9_$]+/igm),
+                        variable,
+                        i,
+                        len = match.length;
+                    for (i = 0; i < len; i++) {
+                        variable = match[i];
+                        if (variable && indexOf(variables, variable) === -1) {
+                            variables.push(variable);
+                        }
+                    }
+                    // contains operator
+                    if (/[\+\-\*\/%!\?\|\^&~<>=,\(\)\[\]]/.test(input)) {
+                        return '(' + input + ')';
+                    }
+                });
 
             var i,
                 len = variables.length;
@@ -192,78 +220,17 @@
             }
         },
         parse: function (source) {
-//            var
-//                that = this,
-//                mordern = ''.trim,
-//                openTag = that.options.openTag ,
-//                closeTag = that.options.openTag ,
-//                output = mordern
-//                    ? ["__out__ = '';", "__out__ += ", ";", "__out__"]
-//                    : ["__out__ = [];", "__out__.push(", ");", "__out__.join('')"]
-//                ,
-//                buffer = '',
-//
-//                trim = function (str) {
-//                    str = str.replace(/^\s+/g, '');
-//                    for (var i = str.length - 1; i >= 0; i--) {
-//                        if (/\S/.test(str.charAt(i))) {
-//                            str = str.substring(0, i + 1);
-//                            break;
-//                        }
-//                    }
-//                    return str;
-//                },
-//
-//                stringify = function (html) {
-//                    return "'" + html
-//                        // escape the single quotation marks and backslash
-//                        .replace(/('|\\)/g, '\\$1')
-//                        // escape the newline character(windows + linux)
-//                        .replace(/\r/g, '\\r')
-//                        .replace(/\n/g, '\\n') + "'";
-//                },
-//
-//                handleHTML = function (html) {
-//                    if (that.uglify && html) {
-//                        // compress html
-//                        html = html
-//                            // remove additional line and blank space
-//                            .replace(/[\n\r\t\s]+/g, ' ')
-//                            // remove html comment
-//                            .replace(/<!--.*?-->/g, '');
-//                    }
-//                    return output[1] + stringify(html) + output[2] + '\n';
-//                },
-//
-//                unshell = function (lexer) {
-//                    lexer = trim(lexer);
-//                    if (!lexer) {
-//                        return '';
-//                    }
-//                };
-//
-//            this.method.each(source.split(openTag), function (section) {
-//                var sections = section.split(closeTag),
-//                    p1 = sections[0],
-//                    p2 = sections[1];
-//                if (1 === sections.length) {
-//                    buffer += handleHTML(p1);
-//                } else {
-//                    p1 && (buffer += unshell(p1));
-//                    buffer += handleHTML(p2);
-//                }
-//            });
-
-
             source = this._getVariable(source) + source;
             source = this._unshell(source);
             source = this._toNative(source);
 
-            this._render = new Function('__, __filter', source);
+            this._render = new Function('__, __method, __filter', source);
             var that = this;
-            this.render = function (data, filters) {
-                filters = merge(filters, that.filters);
-                return that._render.call(this, data, filters);
+            this.render = function (data, options) {
+                options = options || {};
+                var filter = merge(options.filter, that.filter),
+                    method = merge(options.method, that.method);
+                return that._render.call(this, data, method, filter);
             };
 
             return this;
@@ -282,14 +249,12 @@
     diglett.version = '0.0.6';
 
     diglett.cache = {};
-    diglett.filters = {};
 
     diglett.options = {
         'openTag': '{{',
         'closeTag': '}}',
         'cache': true,  // cache the compiled template
-        'debug': true,
-        'uglify': true  // compress HTML output, remove line break and additional blank space.
+        'debug': true
     };
 
     diglett.compile = function (source, options) {
@@ -320,7 +285,7 @@
     };
 
     diglett.render = function (source, data, options) {
-        this.compile(source, options);
+        return this.compile(source, options).render(data, options);
     };
 
     function merge(target, source) {
@@ -355,5 +320,4 @@
         global.diglett = diglett;
     }
 
-})
-    (this);
+})(this);
