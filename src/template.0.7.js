@@ -45,6 +45,10 @@
         },
 
         filter: {
+
+
+
+
             // escape html
             'html': function (content) {
                 var escapeMap = {
