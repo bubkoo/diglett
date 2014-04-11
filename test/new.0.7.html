@@ -48,7 +48,19 @@
     <h2>
         HTML
     </h2>
-    {{ escape | html:param }}
+    {{ escape | html:     param :     'yyyy年MM月dd日 hh:mm:ss':   xxx   :"YYYY"  | uppercase}}
+    <h2>
+        小写
+    </h2>
+    {{ str | lowercase }}
+    <h2>
+        大写
+    </h2>
+    {{ str | uppercase }}
+    <h2>
+        日期时间
+    </h2>
+    {{ datetime | date:'yyyy年MM月dd日 hh:mm:ss' }}
 </script>
 
 <script>
@@ -61,7 +73,9 @@
             '电影': ['大鱼', '霍比特人', '北京遇上西雅图'],
             '音乐': ['Need you now', '静静的', '暗香', '大风吹']
         },
-        'escape': '<div>html</div>'
+        'escape': '<div>html</div>',
+        'str': 'Hello World',
+        'datetime': new Date()
     };
     var html = diglett('#test', data);
 

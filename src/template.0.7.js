@@ -40,7 +40,8 @@
                         }
                     }
                 }
-            }
+            },
+            throw: _throw
         },
 
         filter: {
@@ -52,11 +53,156 @@
                     '\'': '&#39;',
                     '&': '&#38;'
                 };
-                return new String(content)
-                    .replace(/&(?![\w#]+;)|[<>"']/g, function (s) {
-                        s = escapeMap[s];
-                        return  s || '&#38;';
-                    });
+                return ('' + content).replace(/&(?![\w#]+;)|[<>"']/g, function (s) {
+                    s = escapeMap[s];
+                    return s || '&#38;';
+                });
+            },
+            'currency': function (content, currencySymbol) {
+                currencySymbol = currencySymbol || '$';
+
+            },
+
+            'date': function (date, format) {
+
+                var int = function (str) {
+                        return parseInt(str, 10);
+                    },
+
+                    jsonString2Date = function (str) {
+                        // http://en.wikipedia.org/wiki/ISO_8601
+                        var R_ISO8601_STR = /^(\d{4})-?(\d\d)-?(\d\d)(?:T(\d\d)(?::?(\d\d)(?::?(\d\d)(?:\.(\d+))?)?)?(Z|([+-])(\d\d):?(\d\d))?)?$/,
+                            match;
+                        if (match = str.match(R_ISO8601_STR)) {
+                            var date = new Date(0),
+                                tzHour = 0,
+                                tzMin = 0,
+                                dateSetter = match[8] ? date.setUTCFullYear : date.setFullYear,
+                                timeSetter = match[8] ? date.setUTCHours : date.setHours;
+
+                            if (match[9]) {
+                                tzHour = int(match[9] + match[10]);
+                                tzMin = int(match[9] + match[11]);
+                            }
+                            dateSetter.call(date, int(match[1]), int(match[2]) - 1, int(match[3]));
+                            var h = int(match[4] || 0) - tzHour;
+                            var m = int(match[5] || 0) - tzMin;
+                            var s = int(match[6] || 0);
+                            var ms = Math.round(parseFloat('0.' + (match[7] || 0)) * 1000);
+                            timeSetter.call(date, h, m, s, ms);
+                            return date;
+                        }
+                        return str;
+                    },
+
+                    zeroize = function (value, length) {
+
+                        length || (length = 2);
+                        value = '' + value; // toString
+
+                        var i,
+                            len = value.length,
+                            zeros = '';
+                        for (i = 0; i < (length - len); i++) {
+                            zeros += '0';
+                        }
+                        return zeros + value;
+                    };
+
+                if (typeof date === 'string') {
+                    if (/^\-?\d+$/.test(date)) {
+                        date = int(date, 10);
+                    } else {
+                        date = jsonString2Date(date);
+                    }
+                }
+
+                if (typeof date === 'number') {
+                    date = new Date(date);
+                }
+
+
+                if (Object.prototype.toString.call(date) !== '[object Date]') {
+                    return date;
+                }
+
+                format || (format = 'yyyy-MM-dd mm:hh:ss');
+
+                return format.replace(/"[^"]*"|'[^']*'|\b(?:d{1,4}|m{1,4}|yy(?:yy)?|([hHMstT])\1?|[lLZ])\b/g, function ($0) {
+                    switch ($0) {
+                        case 'd':
+                            return date.getDate();
+                        case 'dd':
+                            return zeroize(date.getDate());
+                        case 'ddd': // day of week, short name
+                            return ['Sun', 'Mon', 'Tue', 'Wed', 'Thr', 'Fri', 'Sat'][date.getDay()];
+                        case 'dddd': // day of week, full name
+                            return ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][date.getDay()];
+                        case 'M':
+                            return date.getMonth() + 1;
+                        case 'MM':
+                            return zeroize(date.getMonth() + 1);
+                        case 'MMM':
+                            return ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][date.getMonth()];
+                        case 'MMMM':
+                            return ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][date.getMonth()];
+                        case 'yy':
+                            return String(date.getFullYear()).substr(2);
+                        case 'yyyy':
+                            return date.getFullYear();
+                        case 'h':
+                            return date.getHours() % 12 || 12;
+                        case 'hh':
+                            return zeroize(date.getHours() % 12 || 12);
+                        case 'H':
+                            return date.getHours();
+                        case 'HH':
+                            return zeroize(date.getHours());
+                        case 'm':
+                            return date.getMinutes();
+                        case 'mm':
+                            return zeroize(date.getMinutes());
+                        case 's':
+                            return date.getSeconds();
+                        case 'ss':
+                            return zeroize(date.getSeconds());
+                        case 'l':
+                            return zeroize(date.getMilliseconds(), 3);
+                        case 'L':
+                            var m = date.getMilliseconds();
+                            if (m > 99) m = Math.round(m / 10);
+                            return zeroize(m);
+                        case 'tt':
+                            return date.getHours() < 12 ? 'am' : 'pm';
+                        case 'TT':
+                            return date.getHours() < 12 ? 'AM' : 'PM';
+                        case 'Z':
+                            return date.toUTCString().match(/[A-Z]+$/);
+                        // Return quoted strings with the surrounding quotes removed
+                        default:
+                            return $0.substr(1, $0.length - 2);
+                    }
+                });
+            },
+
+            'lowercase': function (content) {
+                return ('' + content).toLowerCase();
+            },
+
+            'uppercase': function (content) {
+                return ('' + content).toUpperCase();
+            },
+
+            'number': function (number, fractionSize) {
+
+            },
+
+            'filter': function (content) {
+
+            },
+
+            'formatNumber': function (number, pattern, groupSep, decimalSep, fractionSize) {
+
             }
         },
 
@@ -94,18 +240,22 @@
                 .replace(this.rInterpolate, function (input, variable) {
                     var filters = variable.split(/\s*\|\s*/g),
                         content = filters.shift(),
-                        filter,
-                        args,
                         buffer,
-                        i,
-                        len = filters.length;
-                    if (len) {
-                        for (i = 0; i < len; i++) {
-                            args = filters[i].split(/\s*:\s*/g);
-                            filter = args.shift();
-                            buffer = content + (args.length ? ',"' + args.join('","') + '"' : '');
-                            content = '__filter["' + filter + '"].call(this,' + buffer + ')';
+                        filter,
+                        filterStr,
+                        args,
+                        arg;
+                    while (filterStr = filters.shift()) {
+                        filterStr = filterStr.replace(/(['"]{1}?)([\s\S]*?)\1/g, function (input, quote, param) {
+                            return param.replace(/:/g, 'X_#_#_X');
+                        });
+                        args = filterStr.split(/\s*:\s*/g);
+                        filter = args.shift();
+                        buffer = content;
+                        while (arg = args.shift()) {
+                            buffer += ',"' + arg.replace(/X_#_#_X/g, ':').replace(/'/g, "\'").replace(/\"/g, '"') + '"';
                         }
+                        content = '__filter["' + filter + '"].call(this,' + buffer + ')';
                     }
                     return '<%=' + content + '%>';
                 })
@@ -117,6 +267,12 @@
                 .replace(this.rInline, function (input, text) {
                     return that.options.openTag + text + that.options.closeTag;
                 });
+
+            if (this.options.debug === true) {
+                source = '<% try { %>'
+                    + source
+                    + '<% } catch(e) { __method.throw("diglett render exception: " + e.message); } %>';
+            }
 
             return source;
         },
@@ -260,13 +416,12 @@
     diglett.options = {
         'openTag': '{{',
         'closeTag': '}}',
-        'cache': true,  // cache the compiled template
+        'cache': true, // cache the compiled template
         'debug': true
     };
 
     diglett.compile = function (source, options) {
         options = fixOptions(options);
-        options.filters = this.filters;
 
         // source is element's ID, like this #nodeId
         var regId = /^\s*#([\w:\-\.]+)\s*$/igm;
@@ -278,17 +433,29 @@
             });
         }
 
-        var engine = options.cache !== false && this.cache[source]
-            ? this.cache[source]
-            : new Template(options).parse(source);
+        try {
 
-        // set cache
-        if (options.cache !== false) {
-            this.cache[source] = engine;
+            var engine = options.cache !== false && this.cache[source]
+                ? this.cache[source]
+                : new Template(options).parse(source);
+
+            // set cache
+            if (options.cache !== false) {
+                this.cache[source] = engine;
+            }
+
+            return engine;
+
         }
+        catch (e) {
+            _throw('diglett compile exception: ' + e.message);
 
-        return engine;
-
+            return {
+                // noop
+                render: function () {
+                }
+            }
+        }
     };
 
     diglett.render = function (source, data, options) {
@@ -313,6 +480,18 @@
         merge(ret, diglett.options);
         merge(ret, options);
         return ret;
+    }
+
+    function _throw(error) {
+        if (global.console) {
+            if (console.warn) {
+                console.warn(error);
+            }
+            else if (console.log) {
+                console.log(error);
+            }
+        }
+        throw (error);
     }
 
     if (typeof define === 'function') {
