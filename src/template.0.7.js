@@ -21,6 +21,7 @@
 
     Template.prototype = {
         constructor: Template,
+
         method: {
             each: function (data, callback) {
                 var i,
@@ -41,6 +42,7 @@
                 }
             }
         },
+
         filter: {
             'html': function (content) {
                 var escapeMap = {
@@ -57,6 +59,7 @@
                     });
             }
         },
+
         _unshell: function (source) {
             var that = this;
             source = source
@@ -113,10 +116,11 @@
                 // inline
                 .replace(this.rInline, function (input, text) {
                     return that.options.openTag + text + that.options.closeTag;
-                })
-            ;
+                });
+
             return source;
         },
+
         _toNative: function (source) {
             var buffer = "'use strict';"; // use strict mode
             buffer += "__ = __ || {};";
@@ -135,6 +139,7 @@
                 "';return __out.replace(/[\\r\\n]\\s+[\\r\\n]/g, '\\r\\n');";
             return buffer;
         },
+
         _getVariable: function (source) {
             var variables = [],
                 declare,
@@ -219,6 +224,7 @@
                 return '';
             }
         },
+
         parse: function (source) {
             source = this._getVariable(source) + source;
             source = this._unshell(source);
@@ -248,6 +254,7 @@
 
     diglett.version = '0.0.6';
 
+    // cache the compiled template
     diglett.cache = {};
 
     diglett.options = {
