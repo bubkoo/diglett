@@ -1,337 +1,506 @@
 /**
- * Created by Johnny.Peng on 14-4-2.
+ *
+ * diglett.js v0.0.7
+ * by bubkoo@163.com
+ *
+ * MIT license
+ *
  */
 ;
 (function (global) {
+
     'use strict';
 
+    function Template(options) {
+        this.options = options;
+        this.filters = options.filters || {};
 
-    var toString = Object.prototype.toString;
-
-    var isArray = Array.isArray || function (obj) {
-        return '[object Array]' === toString.call(obj);
-    };
-
-    var isFunction = function (value) {
-        return typeof value === 'function';
-    };
-    // fallback for older versions of Chrome and Safari
-    if (isFunction(/x/)) {
-        isFunction = function (value) {
-            return typeof value === 'function' && toString.call(value) === '[object Function]';
-        };
+        //
+        this.rEachStart = new RegExp(this.options.openTag + '\\s*[#@]each\\s+(\\S+)(?:\\s+as\\s+)?(\\S*)?\\s*(\\S*)?\\s*' + this.options.closeTag, 'igm');
+        this.rEachEnd = new RegExp(this.options.openTag + '\\s*\\/each\\s*' + this.options.closeTag, 'igm');
+        this.rIfStart = new RegExp(this.options.openTag + '\\s*[#@]if\\s+(.*?)\\s*' + this.options.closeTag, 'igm');
+        this.rIfEnd = new RegExp(this.options.openTag + '\\s*\\/if\\s*' + this.options.closeTag, 'igm');
+        this.rElse = new RegExp(this.options.openTag + '\\s*[#@]else\\s*' + this.options.closeTag, 'igm');
+        this.rElseIf = new RegExp(this.options.openTag + '\\s*[#@]else\\s*if\\s+(.*?)\\s*' + this.options.closeTag, 'igm');
+        this.rInterpolate = new RegExp(this.options.openTag + '\\s*((?!\\/|#|@|\\/\\/|!--)[\\s\\S]+?)\\s*' + this.options.closeTag, 'igm');
+        this.rComment = new RegExp(this.options.openTag + '!--[\\s\\S]*--' + this.options.closeTag, 'igm');
+        this.rInline = new RegExp(this.options.openTag + '\\s*\\/\\/(.*)\\s*' + this.options.closeTag, 'igm');
     }
 
-    var forEach = function (data, callback) {
-        var i,
-            l;
-        if (isArray(data)) {
-            for (i = 0, l = data.length; i < l; i++) {
-                callback.call(data, data[i], i, data);
+    Template.prototype = {
+        constructor: Template,
+
+        method: {
+            each: function (data, callback) {
+                var i,
+                    l,
+                    isArray = Array.isArray || function (obj) {
+                        return '[object Array]' === Object.prototype.toString.call(obj);
+                    };
+                if (isArray(data)) {
+                    for (i = 0, l = data.length; i < l; i++) {
+                        callback.call(data, data[i], i);
+                    }
+                } else {
+                    for (i in data) {
+                        if (data.hasOwnProperty(i)) {
+                            callback.call(data, data[i], i);
+                        }
+                    }
+                }
+            },
+            throw: _throw
+        },
+
+        filter: {
+            // escape html
+            'html': function (content) {
+                var escapeMap = {
+                    '<': '&#60;',
+                    '>': '&#62;',
+                    '"': '&#34;',
+                    '\'': '&#39;',
+                    '&': '&#38;'
+                };
+                return ('' + content).replace(/&(?![\w#]+;)|[<>"']/g, function (s) {
+                    s = escapeMap[s];
+                    return s || '&#38;';
+                });
+            },
+
+            'currency': function (content, currencySymbol) {
+                currencySymbol = currencySymbol || '$';
+
+            },
+
+            'date': function (date, format) {
+
+                var int = function (str) {
+                        return parseInt(str, 10);
+                    },
+
+                    jsonString2Date = function (str) {
+                        // http://en.wikipedia.org/wiki/ISO_8601
+                        var R_ISO8601_STR = /^(\d{4})-?(\d\d)-?(\d\d)(?:T(\d\d)(?::?(\d\d)(?::?(\d\d)(?:\.(\d+))?)?)?(Z|([+-])(\d\d):?(\d\d))?)?$/,
+                            match;
+                        if (match = str.match(R_ISO8601_STR)) {
+                            var date = new Date(0),
+                                tzHour = 0,
+                                tzMin = 0,
+                                dateSetter = match[8] ? date.setUTCFullYear : date.setFullYear,
+                                timeSetter = match[8] ? date.setUTCHours : date.setHours;
+
+                            if (match[9]) {
+                                tzHour = int(match[9] + match[10]);
+                                tzMin = int(match[9] + match[11]);
+                            }
+                            dateSetter.call(date, int(match[1]), int(match[2]) - 1, int(match[3]));
+                            var h = int(match[4] || 0) - tzHour;
+                            var m = int(match[5] || 0) - tzMin;
+                            var s = int(match[6] || 0);
+                            var ms = Math.round(parseFloat('0.' + (match[7] || 0)) * 1000);
+                            timeSetter.call(date, h, m, s, ms);
+                            return date;
+                        }
+                        return str;
+                    },
+
+                    zeroize = function (value, length) {
+
+                        length || (length = 2);
+                        value = '' + value; // toString
+
+                        var i,
+                            len = value.length,
+                            zeros = '';
+                        for (i = 0; i < (length - len); i++) {
+                            zeros += '0';
+                        }
+                        return zeros + value;
+                    };
+
+                if (typeof date === 'string') {
+                    if (/^\-?\d+$/.test(date)) {
+                        date = int(date, 10);
+                    } else {
+                        date = jsonString2Date(date);
+                    }
+                }
+
+                if (typeof date === 'number') {
+                    date = new Date(date);
+                }
+
+
+                if (Object.prototype.toString.call(date) !== '[object Date]') {
+                    return date;
+                }
+
+                format || (format = 'yyyy-MM-dd mm:hh:ss');
+
+                return format.replace(/"[^"]*"|'[^']*'|\b(?:d{1,4}|m{1,4}|yy(?:yy)?|([hHMstT])\1?|[lLZ])\b/g, function ($0) {
+                    switch ($0) {
+                        case 'd':
+                            return date.getDate();
+                        case 'dd':
+                            return zeroize(date.getDate());
+                        case 'ddd': // day of week, short name
+                            return ['Sun', 'Mon', 'Tue', 'Wed', 'Thr', 'Fri', 'Sat'][date.getDay()];
+                        case 'dddd': // day of week, full name
+                            return ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][date.getDay()];
+                        case 'M':
+                            return date.getMonth() + 1;
+                        case 'MM':
+                            return zeroize(date.getMonth() + 1);
+                        case 'MMM':
+                            return ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][date.getMonth()];
+                        case 'MMMM':
+                            return ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][date.getMonth()];
+                        case 'yy':
+                            return String(date.getFullYear()).substr(2);
+                        case 'yyyy':
+                            return date.getFullYear();
+                        case 'h':
+                            return date.getHours() % 12 || 12;
+                        case 'hh':
+                            return zeroize(date.getHours() % 12 || 12);
+                        case 'H':
+                            return date.getHours();
+                        case 'HH':
+                            return zeroize(date.getHours());
+                        case 'm':
+                            return date.getMinutes();
+                        case 'mm':
+                            return zeroize(date.getMinutes());
+                        case 's':
+                            return date.getSeconds();
+                        case 'ss':
+                            return zeroize(date.getSeconds());
+                        case 'l':
+                            return zeroize(date.getMilliseconds(), 3);
+                        case 'L':
+                            var m = date.getMilliseconds();
+                            if (m > 99) m = Math.round(m / 10);
+                            return zeroize(m);
+                        case 'tt':
+                            return date.getHours() < 12 ? 'am' : 'pm';
+                        case 'TT':
+                            return date.getHours() < 12 ? 'AM' : 'PM';
+                        case 'Z':
+                            return date.toUTCString().match(/[A-Z]+$/);
+                        // Return quoted strings with the surrounding quotes removed
+                        default:
+                            return $0.substr(1, $0.length - 2);
+                    }
+                });
+            },
+
+            'lowercase': function (content) {
+                return ('' + content).toLowerCase();
+            },
+
+            'uppercase': function (content) {
+                return ('' + content).toUpperCase();
+            },
+
+            'number': function (number, fractionSize) {
+
+            },
+
+            'filter': function (content) {
+
+            },
+
+            'formatNumber': function (number, precision, thousand, decimal) {
+
             }
+        },
+
+        _unshell: function (source) {
+            var that = this;
+            source = source
+                // each expression
+                // {{#each items}} // default key is $index, default $value
+                // {{#each items as $value}}
+                // {{#each items as $value $index}}
+                .replace(this.rEachStart, function (input, data, value, key) {
+                    value = value || '$value';
+                    key = key || '$index';
+                    return '<% __method["each"](' + data + ', function(' + value + ', ' + key + '){ %>';
+                })
+                .replace(this.rEachEnd, '<% }); %>')
+
+                // if expression
+                .replace(this.rIfStart, function (input, condition) {
+                    return '<% if(' + condition + ') { %>';
+                })
+                .replace(this.rIfEnd, '<% } %>')
+
+                // else expression
+                .replace(this.rElse, function () {
+                    return '<% } else { %>';
+                })
+
+                // else if expression
+                .replace(this.rElseIf, function (input, condition) {
+                    return '<% } else if(' + condition + ') { %>';
+                })
+
+                // interpolate
+                .replace(this.rInterpolate, function (input, variable) {
+                    var filters = variable.split(/\s*\|\s*/g),
+                        content = filters.shift(),
+                        buffer,
+                        filter,
+                        filterStr,
+                        args,
+                        arg;
+                    while (filterStr = filters.shift()) {
+                        filterStr = filterStr.replace(/(['"]{1}?)([\s\S]*?)\1/g, function (input, quote, param) {
+                            return param.replace(/:/g, 'X_#_#_X');
+                        });
+                        args = filterStr.split(/\s*:\s*/g);
+                        filter = args.shift();
+                        buffer = content;
+                        while (arg = args.shift()) {
+                            buffer += ',"' + arg.replace(/X_#_#_X/g, ':').replace(/'/g, "\'").replace(/\"/g, '"') + '"';
+                        }
+                        content = '__filter["' + filter + '"].call(this,' + buffer + ')';
+                    }
+                    return '<%=' + content + '%>';
+                })
+
+                // clean up comments
+                .replace(this.rComment, '')
+
+                // inline
+                .replace(this.rInline, function (input, text) {
+                    return that.options.openTag + text + that.options.closeTag;
+                });
+
+            if (this.options.debug !== true) {
+                source = '<% try { %>'
+                    + source
+                    + '<% } catch(e) { __method.throw("diglett render exception: " + e.message); } %>';
+            }
+
+            return source;
+        },
+
+        _toNative: function (source) {
+            var buffer = "'use strict';"; // use strict mode
+            buffer += "__ = __ || {};";
+            buffer += "__filter = __filter || {};";
+            buffer += "__method = __method || {};";
+            buffer += "var __out='';__out+='";
+            buffer += source
+                .replace(/\\/g, '\\\\')
+                .replace(/[\r\t\n]/g, ' ')
+                .replace(/'(?=[^%]*%>)/g, '\t')
+                .split("'").join("\\'")
+                .split("\t").join("'")
+                .replace(/<%=(.+?)%>/g, "';__out+=$1; __out+='")
+                .split('<%').join("';")
+                .split('%>').join("__out+='") +
+                "';return __out.replace(/[\\r\\n]\\s+[\\r\\n]/g, '\\r\\n');";
+            return buffer;
+        },
+
+        _getVariable: function (source) {
+            var variables = [],
+                declare,
+                indexOf = function (array, item) {
+                    if (Array.prototype.indexOf) {
+                        return Array.prototype.indexOf.call(array, item);
+                    }
+
+                    var i,
+                        len;
+
+                    for (i = 0, len = array.length; i < len; i++) {
+                        if (array[i] === item) {
+                            return i;
+                        }
+                    }
+
+                    return -1;
+                },
+
+                variableAnalyze = function (input, variable) {
+                    // variable name should start with A-Z, a-z, _ or $
+                    variable = variable.match(/[A-Za-z_$][A-Za-z0-9_$]+/igm)[0];
+                    if (variable && indexOf(variables, variable) === -1) {
+                        variables.push(variable);
+                    }
+                };
+
+            source.replace(this.rEachStart, variableAnalyze).
+                replace(this.rIfStart, variableAnalyze).
+                replace(this.rElseIf, variableAnalyze).
+                replace(this.rInterpolate, function (input, statement) {
+                    // filter
+                    statement = statement.split('|')[0];
+                    // match variables
+                    var match = statement.match(/[A-Za-z_$][A-Za-z0-9_$]+/igm),
+                        variable,
+                        i,
+                        len = match.length;
+                    for (i = 0; i < len; i++) {
+                        variable = match[i];
+                        if (variable && indexOf(variables, variable) === -1) {
+                            variables.push(variable);
+                        }
+                    }
+                    // contains operator
+                    if (/[\+\-\*\/%!\?\|\^&~<>=,\(\)\[\]]/.test(input)) {
+                        return '(' + input + ')';
+                    }
+                });
+
+            var i,
+                len = variables.length;
+            if (len > 0) {
+                declare = 'var ';
+                for (i = 0; i < len; i++) {
+                    declare += variables[i] + '=__.' + variables[i] + ',';
+                }
+            }
+            if (declare) {
+                return '<%' + declare.substr(0, declare.length - 1) + '; %>';
+            } else {
+                return '';
+            }
+        },
+
+        parse: function (source) {
+            source = this._getVariable(source) + source;
+            source = this._unshell(source);
+            source = this._toNative(source);
+
+            this._render = new Function('__, __method, __filter', source);
+            var that = this;
+            this.render = function (data, options) {
+                options = options || {};
+                var filter = merge(options.filter, that.filter),
+                    method = merge(options.method, that.method);
+                return that._render.call(this, data, method, filter);
+            };
+
+            return this;
+        }
+    };
+
+    // create a local object, to be exported or attached to the global object later
+    var diglett = function (source, data) {
+        // call `compile` or `render` with default options
+        if (data) {
+            return diglett.render.call(diglett, source, data, diglett.options);
         } else {
-            for (i in data) {
-                callback.call(data, data[i], i);
+            return diglett.compile.call(diglett, source, diglett.options);
+        }
+    };
+
+    // current version
+    diglett.version = '0.0.7';
+
+    // cache the compiled template
+    diglett.cache = {};
+
+    diglett.options = {
+        'openTag': '{{',
+        'closeTag': '}}',
+        'cache': true, // cache the compiled template
+        'debug': true
+    };
+
+    diglett.compile = function (source, options) {
+        options = fixOptions(options);
+
+        // source is element's ID, like this #nodeId
+        var regId = /^\s*#([\w:\-\.]+)\s*$/igm;
+        if (source.match(regId)) {
+            source.replace(regId, function (input, id) {
+                var doc = document,
+                    ele = doc && doc.getElementById(id);
+                source = ele ? (ele.value || ele.innerHTML) : input;
+            });
+        }
+
+        try {
+
+            var engine = options.cache !== false && this.cache[source]
+                ? this.cache[source]
+                : new Template(options).parse(source);
+
+            // set cache
+            if (options.cache !== false) {
+                this.cache[source] = engine;
+            }
+
+            return engine;
+
+        }
+        catch (e) {
+            _throw('diglett compile exception: ' + e.message);
+
+            return {
+                // noop
+                render: function () {
+                }
             }
         }
     };
 
-    var trim = function (str) {
-        str = str.replace(/^\s+/g, '');
-        for (var i = str.length - 1; i >= 0; i--) {
-            if (/\S/.test(str.charAt(i))) {
-                str = str.substring(0, i + 1);
-                break;
-            }
-        }
-        return str;
+    diglett.render = function (source, data, options) {
+        return this.compile(source, options).render(data, options);
     };
 
-    var merge = function (target, source) {
-        for (var key in source) {
-            if (source.hasOwnProperty(key)) {
-                // 在 iPhone 1 代等设备的 Safari 中，prototype 也会被枚举出来，需排除
-                if (key !== 'prototype') {
+
+    function merge(target, source) {
+        var key;
+        target || (target = {});
+        if (source) {
+            for (key in source) {
+                if (source.hasOwnProperty(key)) {
                     target[key] = source[key];
                 }
             }
         }
         return target;
-    };
-
-    var compiler = function (tpl, options) {
-        this.tpl = tpl;
-        this.openTag = diglett.options.openTag;
-        this.closeTag = diglett.options.closeTag;
-        this.line = 0;
-        this.debug = true;
-        this.uglify = false;
-        this.buffer = '';
-        this.declareList = {};
-        this.commands = diglett.commands;
-        this.filters = diglett.filters;
-
-
-        // 在 IE6-8 下，数组 push 方法拼接字符串会比 += 快
-        // 现代浏览器使用 += 会比数组 push 方法快
-        // 在 v8 引擎中，使用 += 方式比数组拼接快 4.7 倍
-        var mordern = ''.trim;
-        this.out = mordern
-            ? ["__out__ = '';", "__out__ += ", ";", "__out__"]
-            : ["__out__ = [];", "__out__.push(", ");", "__out__.join('')"];
     }
 
-    compiler.prototype = {
-        constructor: compiler,
-        compile: function () {
-            var that = this,
-                fnBody,
-                declare = '\'use strict\';\n'
-                    + 'var __ = __ || {},\n'
-                    + '__filters = __.__filters || {},\n';
+    function fixOptions(options) {
+        var ret = {};
+        merge(ret, diglett.options);
+        merge(ret, options);
+        return ret;
+    }
 
-            forEach(this.tpl.split(this.openTag), function (section) {
-                var sections = section.split(that.closeTag),
-                    p1 = sections[0],
-                    p2 = sections[1];
-
-                if (1 === sections.length) {
-                    that.buffer += that.parser(p1);
-                } else {
-                    p1 && (that.buffer += that.lexer(p1));
-                    that.buffer += that.parser(p2);
-                }
-            });
-
-            for (var key in this.declareList) {
-                if (this.declareList.hasOwnProperty(key)) {
-                    declare += key + ' = __.' + key + ',\n';
-                }
+    function _throw(error) {
+        if (global.console) {
+            if (console.warn) {
+                console.warn(error);
             }
-            declare += this.out[0] + '\n\n';
-            fnBody = declare + that.buffer + 'return ' + this.out[3] + ';';
-
-            console.log(fnBody);
-        },
-        compress: function (html) {
-            // 压缩 HTML，删除多余的空白和注释
-            if (this.uglify && html) {
-                html = html
-                    .replace(/[\n\r\t\s]+/g, ' ')
-                    .replace(/<!--.*?-->/g, '');
-            }
-            return html;
-        },
-        stringify: function (html) {
-            return "'" + html
-                // 单引号与反斜杠转义
-                .replace(/('|\\)/g, '\\$1')
-                // 换行符转义(windows + linux)
-                .replace(/\r/g, '\\r')
-                .replace(/\n/g, '\\n') + "'";
-        },
-        parser: function (html) {
-            // 记录行号
-            this.line += html.split(/\n/).length;
-            if (html) {
-                html = this.compress(html);
-                html = this.out[1] + this.stringify(html) + this.out[2] + '\n';
-            }
-            return html;
-        },
-        lexer: function (grammar) {
-            grammar = trim(grammar);
-            if (!grammar) {
-                return;
-            }
-            var start = grammar[0],
-                command = grammar.substr(1),
-                params = command.split(/[\s]+/);
-            command = params.shift();
-            command += '^' === start ? start : '';
-            command = command.toLowerCase();
-            switch (start) {
-                case '#':// #if #elseif #each #else
-                case '@':// @if @elseif @each @else
-                case '^':// ^if ^else
-                    // #if arg
-                    // #if arg | filter1:param | filter2
-                    // #each items
-                    // #each items as $item $index
-                    // #each items | filter:param | filter2 as $item $index
-                    // #each items | filter:param as $item $index
-
-                    if (!this.declareList.hasOwnProperty(params[0])) {
-                        this.declareList[params[0]] = 1;
-                    }
-                    if (this.commands.hasOwnProperty(command)) {
-                        var fn = this.commands[command];
-                        if (isFunction(fn)) {
-                            return fn.call(this.commands, params);
-                        }
-                    }
-                    break;
-                case '/':
-                    // 结束或双括号转义
-                    if ('/' === grammar[1]) {
-                        return '{{' + grammar.substr(2) + '}}';
-                    } else {
-                        command = ('end' + command).toLowerCase();
-                        if (this.commands.hasOwnProperty(command)) {
-                            var fn = this.commands[command];
-                            if (isFunction(fn)) {
-                                return fn.call(this.commands, params);
-                            }
-                        } else {
-                            return '}';
-                        }
-                    }
-                    break;
-                case '!':
-                    // 注释
-                    return '';
-                    break;
-                default :
-                    // 普通变量
-                    // data | filter1:param | filter2
-
-                    params = grammar.split(/\s*\|\s*/);
-                    grammar = params[0];
-                    if (!this.declareList.hasOwnProperty(grammar)) {
-                        this.declareList[grammar] = 1;
-                    }
-
-                    var i,
-                        len = params.length,
-                        filter,
-                        filterArgs;
-                    if (len > 1) {
-                        for (i = 1; i < len; i++) {
-                            filterArgs = params[i].split(/\s*:\*/);
-                            filter = filterArgs.shift();
-                            filterArgs.unshift(grammar)
-                            grammar = '__filters[' + filter + '] ? __filters[' + filter + '].apply(null,' + filterArgs + ') : ' + grammar;
-                        }
-                    }
-                    return this.out[1] + grammar + this.out[2] + '\n';
-                    break;
+            else if (console.log) {
+                console.log(error);
             }
         }
-    };
-
-
-    var diglett = function (tpl, data, options) {
-
-    };
-
-    diglett.version = '0.0.6';
-
-    var cache = diglett.cache = {};
-    var commands = diglett.commands = {};
-    var filters = diglett.filters = {};
-
-    diglett.options = {
-        openTag: '{{',
-        closeTag: '}}',
-        cache: true,
-        debug: true,
-        uglify: true
-    };
-
-    diglett.config = function (options) {
-
-    };
-
-    diglett.compile = function (tpl) {
-//        try {
-        new compiler(tpl).compile()
-//        }
-//        catch (e) {
-
-//        }
-    };
-
-    diglett.render = function () {
-
-    };
-
-    diglett.addCommand = function (name, command) {
-        if (!commands.hasOwnProperty(name)) {
-            commands[name] = command;
-        }
-    };
-
-    diglett.removeCommand = function (name) {
-        if (commands.hasOwnProperty(name)) {
-            delete commands[name];
-        }
-    };
-
-    diglett.addFilter = function (name, filter) {
-        if (!filters.hasOwnProperty(name)) {
-            filters[name] = filter;
-        }
-    };
-
-    diglett.removeFilter = function (name) {
-        if (filters.hasOwnProperty(name)) {
-            delete filters[name];
-        }
-    };
-
-
-    (function (commands) {
-        var nativeCommands = {
-            'if': function (params) {
-                return 'if(' + params.join(' ') + '){';
-            },
-            '^if': function (params) {
-                return 'if(!(' + params.join(' ') + ')){';
-            },
-            'elseif': function (params) {
-                return 'else if(' + params.join(' ') + '){';
-            },
-            'else': function (params) {
-                return '{';
-            },
-            'each': function (params) {
-                var buffer = '~function(){';
-
-                return buffer;
-            },
-            'endeach': function () {
-                return '}();'
-            },
-            'with': function (params) {
-                return '~function() {}();'
-            }
-        };
-        nativeCommands['^else'] = nativeCommands['elseif'];
-        merge(commands, nativeCommands);
-    })(diglett.commands);
-
-    (function (filters) {
-        var nativeFilters = {
-            'html': function () {
-            },
-            'money': function () {
-            },
-            'datetime': function () {
-            }
-        };
-        merge(filters, nativeFilters);
-    })(diglett.filters);
+        throw (error);
+    }
 
     if (typeof define === 'function') {
         // RequireJS && SeaJS
         define(function () {
             return diglett;
-        })
+        });
     } else if (typeof exports !== 'undefined') {
-        // NodeJS
-        module.exports = diglett;
+        if (typeof module !== 'undefined' && module.exports) {
+            // NodeJS
+            module.exports = diglett;
+        }
+    } else {
+        global.diglett = diglett;
     }
 
-    global.diglett = diglett;
 
 })(this);
