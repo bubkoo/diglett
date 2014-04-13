@@ -15,17 +15,40 @@
         this.options = options;
         this.filters = options.filters || {};
 
+        var openTag = this.options.openTag;
+        var closeTag = this.options.closeTag;
         //
-        this.rEachStart = new RegExp(this.options.openTag + '\\s*[#@]each\\s+(\\S+)(?:\\s+as\\s+)?(\\S*)?\\s*(\\S*)?\\s*' + this.options.closeTag, 'igm');
-        this.rEachEnd = new RegExp(this.options.openTag + '\\s*\\/each\\s*' + this.options.closeTag, 'igm');
-        this.rIfStart = new RegExp(this.options.openTag + '\\s*[#@]if\\s+(.*?)\\s*' + this.options.closeTag, 'igm');
-        this.rIfEnd = new RegExp(this.options.openTag + '\\s*\\/if\\s*' + this.options.closeTag, 'igm');
-        this.rElse = new RegExp(this.options.openTag + '\\s*[#@]else\\s*' + this.options.closeTag, 'igm');
-        this.rElseIf = new RegExp(this.options.openTag + '\\s*[#@]else\\s*if\\s+(.*?)\\s*' + this.options.closeTag, 'igm');
-        this.rInterpolate = new RegExp(this.options.openTag + '\\s*((?!\\/|#|@|\\/\\/|!--)[\\s\\S]+?)\\s*' + this.options.closeTag, 'igm');
-        this.rComment = new RegExp(this.options.openTag + '!--[\\s\\S]*--' + this.options.closeTag, 'igm');
-        this.rInline = new RegExp(this.options.openTag + '\\s*\\/\\/(.*)\\s*' + this.options.closeTag, 'igm');
+        this.rEachStart = new RegExp(openTag + '\\s*[#@]each\\s+(\\S+)(?:\\s+as\\s+)?(\\S*)?\\s*(\\S*)?\\s*' + closeTag, 'igm');
+        this.rEachEnd = new RegExp(openTag + '\\s*\\/each\\s*' + closeTag, 'igm');
+        this.rIfStart = new RegExp(openTag + '\\s*[#@]if\\s+(.*?)\\s*' + closeTag, 'igm');
+        this.rIfEnd = new RegExp(openTag + '\\s*\\/if\\s*' + closeTag, 'igm');
+        this.rElse = new RegExp(openTag + '\\s*[#@]else\\s*' + closeTag, 'igm');
+        this.rElseIf = new RegExp(openTag + '\\s*[#@]else\\s*if\\s+(.*?)\\s*' + closeTag, 'igm');
+        this.rInterpolate = new RegExp(openTag + '\\s*((?!\\/|#|@|\\/\\/|!--)[\\s\\S]+?)\\s*' + closeTag, 'igm');
+        this.rComment = new RegExp(openTag + '!--[\\s\\S]*--' + closeTag, 'igm');
+        this.rInline = new RegExp(openTag + '\\s*\\/\\/(.*)\\s*' + closeTag, 'igm');
+        this.rInclude = new RegExp(openTag + '\\s*[#@]include\\s*(\\S*)\\s*(\\S*)\\s*' + closeTag, 'igm');
+
+        var that = this;
+
+        this.method['include'] = function (tpl, data) {
+            var useCache = that.options.cache,
+                cached;
+            if (useCache) {
+                if (cached = Template.cache[tpl]) {
+                    return cached.render(data);
+                }
+            }
+            cached = that.parse(tpl);
+            if (useCache) {
+                Template.cache[tpl] = cached;
+            }
+            return cached.render(data);
+        };
     }
+
+    // cache the compiled template
+    Template.cache = {};
 
     Template.prototype = {
         constructor: Template,
@@ -68,133 +91,6 @@
                 });
             },
 
-            'currency': function (content, currencySymbol) {
-                currencySymbol = currencySymbol || '$';
-
-            },
-
-            'date': function (date, format) {
-
-                var int = function (str) {
-                        return parseInt(str, 10);
-                    },
-
-                    jsonString2Date = function (str) {
-                        // http://en.wikipedia.org/wiki/ISO_8601
-                        var R_ISO8601_STR = /^(\d{4})-?(\d\d)-?(\d\d)(?:T(\d\d)(?::?(\d\d)(?::?(\d\d)(?:\.(\d+))?)?)?(Z|([+-])(\d\d):?(\d\d))?)?$/,
-                            match;
-                        if (match = str.match(R_ISO8601_STR)) {
-                            var date = new Date(0),
-                                tzHour = 0,
-                                tzMin = 0,
-                                dateSetter = match[8] ? date.setUTCFullYear : date.setFullYear,
-                                timeSetter = match[8] ? date.setUTCHours : date.setHours;
-
-                            if (match[9]) {
-                                tzHour = int(match[9] + match[10]);
-                                tzMin = int(match[9] + match[11]);
-                            }
-                            dateSetter.call(date, int(match[1]), int(match[2]) - 1, int(match[3]));
-                            var h = int(match[4] || 0) - tzHour;
-                            var m = int(match[5] || 0) - tzMin;
-                            var s = int(match[6] || 0);
-                            var ms = Math.round(parseFloat('0.' + (match[7] || 0)) * 1000);
-                            timeSetter.call(date, h, m, s, ms);
-                            return date;
-                        }
-                        return str;
-                    },
-
-                    zeroize = function (value, length) {
-
-                        length || (length = 2);
-                        value = '' + value; // toString
-
-                        var i,
-                            len = value.length,
-                            zeros = '';
-                        for (i = 0; i < (length - len); i++) {
-                            zeros += '0';
-                        }
-                        return zeros + value;
-                    };
-
-                if (typeof date === 'string') {
-                    if (/^\-?\d+$/.test(date)) {
-                        date = int(date, 10);
-                    } else {
-                        date = jsonString2Date(date);
-                    }
-                }
-
-                if (typeof date === 'number') {
-                    date = new Date(date);
-                }
-
-
-                if (Object.prototype.toString.call(date) !== '[object Date]') {
-                    return date;
-                }
-
-                format || (format = 'yyyy-MM-dd mm:hh:ss');
-
-                return format.replace(/"[^"]*"|'[^']*'|\b(?:d{1,4}|m{1,4}|yy(?:yy)?|([hHMstT])\1?|[lLZ])\b/g, function ($0) {
-                    switch ($0) {
-                        case 'd':
-                            return date.getDate();
-                        case 'dd':
-                            return zeroize(date.getDate());
-                        case 'ddd': // day of week, short name
-                            return ['Sun', 'Mon', 'Tue', 'Wed', 'Thr', 'Fri', 'Sat'][date.getDay()];
-                        case 'dddd': // day of week, full name
-                            return ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][date.getDay()];
-                        case 'M':
-                            return date.getMonth() + 1;
-                        case 'MM':
-                            return zeroize(date.getMonth() + 1);
-                        case 'MMM':
-                            return ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][date.getMonth()];
-                        case 'MMMM':
-                            return ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][date.getMonth()];
-                        case 'yy':
-                            return String(date.getFullYear()).substr(2);
-                        case 'yyyy':
-                            return date.getFullYear();
-                        case 'h':
-                            return date.getHours() % 12 || 12;
-                        case 'hh':
-                            return zeroize(date.getHours() % 12 || 12);
-                        case 'H':
-                            return date.getHours();
-                        case 'HH':
-                            return zeroize(date.getHours());
-                        case 'm':
-                            return date.getMinutes();
-                        case 'mm':
-                            return zeroize(date.getMinutes());
-                        case 's':
-                            return date.getSeconds();
-                        case 'ss':
-                            return zeroize(date.getSeconds());
-                        case 'l':
-                            return zeroize(date.getMilliseconds(), 3);
-                        case 'L':
-                            var m = date.getMilliseconds();
-                            if (m > 99) m = Math.round(m / 10);
-                            return zeroize(m);
-                        case 'tt':
-                            return date.getHours() < 12 ? 'am' : 'pm';
-                        case 'TT':
-                            return date.getHours() < 12 ? 'AM' : 'PM';
-                        case 'Z':
-                            return date.toUTCString().match(/[A-Z]+$/);
-                        // Return quoted strings with the surrounding quotes removed
-                        default:
-                            return $0.substr(1, $0.length - 2);
-                    }
-                });
-            },
-
             'lowercase': function (content) {
                 return ('' + content).toLowerCase();
             },
@@ -203,15 +99,7 @@
                 return ('' + content).toUpperCase();
             },
 
-            'number': function (number, fractionSize) {
-
-            },
-
             'filter': function (content) {
-
-            },
-
-            'formatNumber': function (number, precision, thousand, decimal) {
 
             }
         },
@@ -270,6 +158,10 @@
                     return '<%=' + content + '%>';
                 })
 
+                .replace(this.rInclude, function (input, tpl, data) {
+                    return '<%= __method["include"](' + tpl + ', ' + data + '); %>';
+                })
+
                 // clean up comments
                 .replace(this.rComment, '')
 
@@ -288,22 +180,46 @@
         },
 
         _toNative: function (source) {
-            var buffer = "'use strict';"; // use strict mode
+            var uglify = this.options.uglify,
+                buffer = "'use strict';"; // use strict mode
+
             buffer += "__ = __ || {};";
             buffer += "__filter = __filter || {};";
             buffer += "__method = __method || {};";
             buffer += "var __out='';__out+='";
+
+//            buffer += source
+//                .replace(/\\/g, '\\\\')
+//                .replace(/[\r\t\n]+/g, '')
+//                //.replace(/'(?=[^%]*%>)/g, '\t')
+//                //.split("'").join("\\'")
+//                //.split("\t").join("'")
+//                .replace(/<%=(.+?)%>/g, "';__out+=$1; __out+='")
+//                .split('<%').join("';")
+//                .split('%>').join("__out+='") +
+//                "';return __out.replace(/[\\r\\n]\\s+[\\r\\n]/g, '\\r\\n');";
+
             buffer += source
                 .replace(/\\/g, '\\\\')
-                .replace(/[\r\t\n]/g, ' ')
-                .replace(/'(?=[^%]*%>)/g, '\t')
-                .split("'").join("\\'")
-                .split("\t").join("'")
-                .replace(/<%=(.+?)%>/g, "';__out+=$1; __out+='")
+                .replace(/<%=(.+?)%>/g, "';__out+=$1;__out+='")
                 .split('<%').join("';")
-                .split('%>').join("__out+='") +
-                "';return __out.replace(/[\\r\\n]\\s+[\\r\\n]/g, '\\r\\n');";
-            return buffer;
+                .split('%>').join("__out+='");
+            if (uglify === true) {
+                buffer = buffer
+                    .replace(/[\r\t\n]+/g, '')
+                    .replace(/__out\+='\s*';/g, '')
+                    .replace(/>\s+</g, '><')
+                    .replace(/(__out\+=')\s+</g, '$1<')
+                    .replace(/>\s+'/g, '>\'')
+                    .replace(/>\s+\b/g, '> ')
+                    .replace(/\b\s+</g, ' <');
+            } else {
+                buffer = buffer
+                    .replace(/[\r\n]+/g, ' ')
+                    .replace(/__out\+='';/g, '')
+            }
+
+            return buffer += "';return __out;";
         },
 
         _getVariable: function (source) {
@@ -326,12 +242,16 @@
                     return -1;
                 },
 
-                variableAnalyze = function (input, variable) {
-                    // variable name should start with A-Z, a-z, _ or $
-                    variable = variable.match(/[A-Za-z_$][A-Za-z0-9_$]+/igm)[0];
+                addVarible = function (variable) {
                     if (variable && indexOf(variables, variable) === -1) {
                         variables.push(variable);
                     }
+                },
+
+                variableAnalyze = function (input, variable) {
+                    // variable name should start with A-Z, a-z, _ or $
+                    variable = variable.match(/[A-Za-z_$][A-Za-z0-9_$]+/igm)[0];
+                    addVarible(variable);
                 };
 
             source.replace(this.rEachStart, variableAnalyze).
@@ -346,15 +266,21 @@
                         i,
                         len = match.length;
                     for (i = 0; i < len; i++) {
+                        addVarible(match[i]);
                         variable = match[i];
-                        if (variable && indexOf(variables, variable) === -1) {
-                            variables.push(variable);
-                        }
                     }
                     // contains operator
                     if (/[\+\-\*\/%!\?\|\^&~<>=,\(\)\[\]]/.test(input)) {
                         return '(' + input + ')';
                     }
+                }).
+                replace(this.rInclude, function (input, tpl, data) {
+                    if (tpl && tpl.match(/^(['"])#[\w:\-\.]+\1$/igm)) {
+                        return input.replace('/[\'\"]/g', '');
+                    } else {
+                        addVarible(tpl);
+                    }
+                    addVarible(data);
                 });
 
             var i,
@@ -373,20 +299,48 @@
         },
 
         parse: function (source) {
-            source = this._getVariable(source) + source;
-            source = this._unshell(source);
-            source = this._toNative(source);
 
-            this._render = new Function('__, __method, __filter', source);
-            var that = this;
-            this.render = function (data, options) {
+            var that = this,
+                useCache = that.options.cache,
+                cached;
+            if (useCache) {
+                if (cached = Template.cache[source]) {
+                    return cached;
+                }
+            }
+
+            // source is element's ID, like this #nodeId
+            var regId = /^\s*#([\w:\-\.]+)\s*$/igm;
+            if (source.match(regId)) {
+                source.replace(regId, function (input, id) {
+                    var doc = document,
+                        ele = doc && doc.getElementById(id);
+                    source = ele ? (ele.value || ele.innerHTML) : input;
+                });
+            }
+
+            // firstly, remove the html comment
+            if (that.options.uglify === true) {
+                source = source.replace(/<!--.*?-->/g, '');
+            }
+
+            source = that._getVariable(source) + source;
+            source = that._unshell(source);
+            source = that._toNative(source);
+
+            that._render = new Function('__, __method, __filter', source);
+            that.render = function (data, options) {
                 options = options || {};
                 var filter = merge(options.filter, that.filter),
                     method = merge(options.method, that.method);
                 return that._render.call(this, data, method, filter);
             };
 
-            return this;
+            if (useCache) {
+                Template.cache[source] = that;
+            }
+
+            return that;
         }
     };
 
@@ -403,49 +357,43 @@
     // current version
     diglett.version = '0.0.7';
 
-    // cache the compiled template
-    diglett.cache = {};
-
     diglett.options = {
         'openTag': '{{',
         'closeTag': '}}',
         'cache': true, // cache the compiled template
-        'debug': true
+        'debug': true,
+        'uglify': true // compress result
     };
 
     diglett.compile = function (source, options) {
         options = fixOptions(options);
 
-        // source is element's ID, like this #nodeId
-        var regId = /^\s*#([\w:\-\.]+)\s*$/igm;
-        if (source.match(regId)) {
-            source.replace(regId, function (input, id) {
-                var doc = document,
-                    ele = doc && doc.getElementById(id);
-                source = ele ? (ele.value || ele.innerHTML) : input;
-            });
-        }
-
-        try {
-
-            var engine = options.cache !== false && this.cache[source]
-                ? this.cache[source]
-                : new Template(options).parse(source);
-
-            // set cache
+        var doParse = function () {
+            var engine,
+                cached;
             if (options.cache !== false) {
-                this.cache[source] = engine;
+                if (cached = Template.cache[source]) {
+                    engine = cached;
+                }
             }
+            engine = engine || new Template(options).parse(source);
 
             return engine;
+        };
 
-        }
-        catch (e) {
-            _throw('diglett compile exception: ' + e.message);
+        if (options.debug) {
+            return doParse();
+        } else {
+            try {
+                return doParse();
+            }
+            catch (e) {
+                _throw('diglett compile exception: ' + e.message);
 
-            return {
-                // noop
-                render: function () {
+                return {
+                    // noop
+                    render: function () {
+                    }
                 }
             }
         }
@@ -453,6 +401,25 @@
 
     diglett.render = function (source, data, options) {
         return this.compile(source, options).render(data, options);
+    };
+
+    diglett.addFilter = function (filterName, fn, overwrite) {
+        var filters = Template.prototype.filter;
+        if (filters.hasOwnProperty(filterName)) {
+            if (overwrite === true) {
+                return filters[filterName] = fn;
+            } else {
+                return false;
+            }
+        }
+        return filters[filterName] = fn;
+    };
+
+    diglett.removeFilter = function (filterName) {
+        var filters = Template.prototype.filter;
+        if (filters.hasOwnProperty(filterName)) {
+            return delete filters[filterName];
+        }
     };
 
 
