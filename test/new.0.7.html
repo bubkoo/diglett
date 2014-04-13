@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
     <title></title>
     <script src="../src/diglett.js"></script>
+    <script src="../src/currency.js"></script>
+    <script src="../src/datetime.js"></script>
+    <script src="../src/registerFilter.js"></script>
 </head>
 <body>
 <div id="content">
@@ -34,7 +37,7 @@
         嵌套
     </h2>
     <ul>
-        {{ #each arrs}}
+        {{#each arrs}}
         <li>
             <h3>类别：{{ $index }}</h3>
             <ul>
@@ -48,21 +51,47 @@
     <h2>
         HTML
     </h2>
-    {{ escape | html:     param :     'yyyy年MM月dd日 hh:mm:ss':   xxx   :"YYYY"  | uppercase}}
+    {{ escape |   html   |    uppercase}}
     <h2>
         小写
     </h2>
-    {{ str | lowercase }}
+    {{ str |   lowercase   }}
     <h2>
         大写
     </h2>
-    {{ str | uppercase }}
-    <h2>
-        日期时间
-    </h2>
-    {{ datetime }}
+    {{ str |  uppercase   }}
+
     <h2>Include 子模板</h2>
     {{#include subtpl subdata}}
+
+    <h2>高级filter示例</h2>
+    <h3>日期时间</h3>
+    {{ datetime |    datetime  :  "ddd yyyy-MM-dd HH:mm:ss"}}
+    <h3>数字</h3>
+    {{num | number:2}}
+    <h3>货币</h3>
+    {{num | currency:￥}}
+    <h3>limitTo</h3>
+    <p>
+        限制字符串长度：{{longStr |  limitTo   }}
+    </p>
+    <p>
+        限制字符串长度：{{longStr |   limitTo  : 4   }}
+    </p>
+    <p>
+        限制数组长度
+    </p>
+    <p>
+    <ul>
+        {{#each list as item}}
+        <li>{{ item }}</li>
+        {{/each}}
+    </ul>
+    </p>
+    <br>
+    <br>
+    <br>
+    <br>
 </script>
 <script id="tpl2" type="text/template">
     {{ datetime }}
@@ -90,7 +119,9 @@
         'subtpl': 'Hello, Hello, {{name}}',
         'subdata': {
             name: 'Johhny'
-        }
+        },
+        num: 12345678.98765,
+        longStr: 'veryverylong'
     };
 
     diglett.options.uglify = true;
@@ -101,7 +132,7 @@
 
 </script>
 <script>
-    function complied(){
+    function complied() {
 
 
     }

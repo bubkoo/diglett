@@ -1,6 +1,7 @@
 /**
  *
  * diglett.js v0.0.7
+ *
  * by bubkoo@163.com
  *
  * MIT license
@@ -13,12 +14,21 @@
 
     function Template(options) {
         this.options = options;
-        this.filters = options.filters || {};
+
+        var filters = options.filter,
+            filter;
+        if (filters) {
+            for (filter in filters) {
+                if (filters.hasOwnProperty(filter)) {
+                    Template.registerFilter(filter, filters[filter], true);
+                }
+            }
+        }
 
         var openTag = this.options.openTag;
         var closeTag = this.options.closeTag;
         //
-        this.rEachStart = new RegExp(openTag + '\\s*[#@]each\\s+(\\S+)(?:\\s+as\\s+)?(\\S*)?\\s*(\\S*)?\\s*' + closeTag, 'igm');
+        this.rEachStart = new RegExp(openTag + '\\s*[#@]each\\s+(\\S+)(?:\\s+as\\s+)?(\\S*)?\\s*(\\S*)?\\s*(?:\\|)?([.]*)?\\s*' + closeTag, 'igm');
         this.rEachEnd = new RegExp(openTag + '\\s*\\/each\\s*' + closeTag, 'igm');
         this.rIfStart = new RegExp(openTag + '\\s*[#@]if\\s+(.*?)\\s*' + closeTag, 'igm');
         this.rIfEnd = new RegExp(openTag + '\\s*\\/if\\s*' + closeTag, 'igm');
@@ -31,7 +41,7 @@
 
         var that = this;
 
-        this.method['include'] = function (tpl, data) {
+        Template.registerMethod('include', function (tpl, data) {
             var useCache = that.options.cache,
                 cached;
             if (useCache) {
@@ -44,7 +54,7 @@
                 Template.cache[tpl] = cached;
             }
             return cached.render(data);
-        };
+        }, true);
     }
 
     // cache the compiled template
@@ -57,18 +67,37 @@
             each: function (data, callback) {
                 var i,
                     l,
+                    counter = 0,
+                    even = false,
+                    odd = false,
+                    first = false,
+                    last = false,
                     isArray = Array.isArray || function (obj) {
                         return '[object Array]' === Object.prototype.toString.call(obj);
+                    },
+                    setFlag = function (index, len) {
+                        if ((index + 1) % 2 === 0) {
+                            even = true;
+                            odd = false;
+                        } else {
+                            even = false;
+                            odd = true;
+                        }
+                        index === 0 && (first = true);
+                        index === (len - 1) && (last = true);
                     };
                 if (isArray(data)) {
                     for (i = 0, l = data.length; i < l; i++) {
-                        callback.call(data, data[i], i);
+                        setFlag(i, l);
+                        callback.call(data, data[i], i, even, odd, first, last);
                     }
                 } else {
                     for (i in data) {
+                        setFlag(counter, counter);
                         if (data.hasOwnProperty(i)) {
-                            callback.call(data, data[i], i);
+                            callback.call(data, data[i], i, even, odd, first, last);
                         }
+                        counter++;
                     }
                 }
             },
@@ -91,30 +120,64 @@
                 });
             },
 
-            'lowercase': function (content) {
-                return ('' + content).toLowerCase();
+            'lowercase': function (value) {
+                return ('' + value).toLowerCase();
             },
 
-            'uppercase': function (content) {
-                return ('' + content).toUpperCase();
-            },
-
-            'filter': function (content) {
-
+            'uppercase': function (value) {
+                return ('' + value).toUpperCase();
             }
         },
 
         _unshell: function (source) {
-            var that = this;
+            var that = this,
+                trim = function (str) {
+                    str = str.replace(/^\s+/g, '');
+                    for (var i = str.length - 1; i >= 0; i--) {
+                        if (/\S/.test(str.charAt(i))) {
+                            str = str.substring(0, i + 1);
+                            break;
+                        }
+                    }
+                    return str;
+                },
+                handleFilter = function (value, filterStr) {
+                    if (filterStr) {
+                        filterStr = trim(filterStr);
+                    }
+                    if (filterStr) {
+                        var filterGroups = filterStr.split(/\s*\|\s*/g),
+                            filterGroup,
+                            filter,
+                            buffer,
+                            args,
+                            arg;
+                        while (filterGroup = filterGroups.shift()) {
+                            filterGroup = filterGroup.replace(/(['"]{1}?)([\s\S]*?)\1/g, function (input, quote, param) {
+                                return param.replace(/:/g, 'X_#_#_X');
+                            });
+                            args = filterGroup.split(/\s*:\s*/g);
+                            filter = args.shift();
+
+                            buffer = value;
+                            while (arg = args.shift()) {
+                                buffer += ',"' + arg.replace(/X_#_#_X/g, ':').replace(/'/g, "\'").replace(/\"/g, '"') + '"';
+                            }
+                            value = '__filter["' + filter + '"].call(this,' + buffer + ')';
+                        }
+                    }
+                    return value;
+                };
             source = source
                 // each expression
                 // {{#each items}} // default key is $index, default $value
                 // {{#each items as $value}}
                 // {{#each items as $value $index}}
-                .replace(this.rEachStart, function (input, data, value, key) {
+                .replace(this.rEachStart, function (input, data, value, key, filter) {
                     value = value || '$value';
                     key = key || '$index';
-                    return '<% __method["each"](' + data + ', function(' + value + ', ' + key + '){ %>';
+                    data = handleFilter(data, filter);
+                    return '<% __method["each"](' + data + ', function(' + value + ', ' + key + ',$even,$odd,$first,$last){ %>';
                 })
                 .replace(this.rEachEnd, '<% }); %>')
 
@@ -136,25 +199,36 @@
 
                 // interpolate
                 .replace(this.rInterpolate, function (input, variable) {
-                    var filters = variable.split(/\s*\|\s*/g),
-                        content = filters.shift(),
-                        buffer,
-                        filter,
+                    variable = trim(variable);
+                    var index = variable.indexOf('|'),
                         filterStr,
-                        args,
-                        arg;
-                    while (filterStr = filters.shift()) {
-                        filterStr = filterStr.replace(/(['"]{1}?)([\s\S]*?)\1/g, function (input, quote, param) {
-                            return param.replace(/:/g, 'X_#_#_X');
-                        });
-                        args = filterStr.split(/\s*:\s*/g);
-                        filter = args.shift();
-                        buffer = content;
-                        while (arg = args.shift()) {
-                            buffer += ',"' + arg.replace(/X_#_#_X/g, ':').replace(/'/g, "\'").replace(/\"/g, '"') + '"';
-                        }
-                        content = '__filter["' + filter + '"].call(this,' + buffer + ')';
+                        content;
+                    if (index > 0) {
+                        content = variable.substr(0, index);
+                        filterStr = variable.substr(index + 1);
+                        content = handleFilter(content, filterStr);
+                    } else {
+                        content = variable;
                     }
+//                    var filters = variable.split(/\s*\|\s*/g),
+//                        content = filters.shift(),
+//                        buffer,
+//                        filter,
+//                        filterStr,
+//                        args,
+//                        arg;
+//                    while (filterStr = filters.shift()) {
+//                        filterStr = filterStr.replace(/(['"]{1}?)([\s\S]*?)\1/g, function (input, quote, param) {
+//                            return param.replace(/:/g, 'X_#_#_X');
+//                        });
+//                        args = filterStr.split(/\s*:\s*/g);
+//                        filter = args.shift();
+//                        buffer = content;
+//                        while (arg = args.shift()) {
+//                            buffer += ',"' + arg.replace(/X_#_#_X/g, ':').replace(/'/g, "\'").replace(/\"/g, '"') + '"';
+//                        }
+//                        content = '__filter["' + filter + '"].call(this,' + buffer + ')';
+//                    }
                     return '<%=' + content + '%>';
                 })
 
@@ -344,6 +418,45 @@
         }
     };
 
+    Template.registerFilter = function (filterName, fn, overwrite) {
+        var filters = Template.prototype.filter;
+        if (filters.hasOwnProperty(filterName)) {
+            if (overwrite === true) {
+                return filters[filterName] = fn;
+            } else {
+                return false;
+            }
+        }
+        return filters[filterName] = fn;
+    };
+
+    Template.removeFilter = function (filterName) {
+        var filters = Template.prototype.filter;
+        if (filters.hasOwnProperty(filterName)) {
+            return delete filters[filterName];
+        }
+    };
+
+    Template.registerMethod = function (methodName, fn, overwrite) {
+        var methods = Template.prototype.method;
+        if (methods.hasOwnProperty(methodName)) {
+            if (overwrite === true) {
+                return methods[methodName] = fn;
+            } else {
+                return false;
+            }
+        }
+        return methods[methodName] = fn;
+    };
+
+    Template.removeMethod = function (methodName) {
+        var methods = Template.prototype.method;
+        if (methods.hasOwnProperty(methodName)) {
+            return delete methods[methodName];
+        }
+    };
+
+
     // create a local object, to be exported or attached to the global object later
     var diglett = function (source, data) {
         // call `compile` or `render` with default options
@@ -403,25 +516,9 @@
         return this.compile(source, options).render(data, options);
     };
 
-    diglett.addFilter = function (filterName, fn, overwrite) {
-        var filters = Template.prototype.filter;
-        if (filters.hasOwnProperty(filterName)) {
-            if (overwrite === true) {
-                return filters[filterName] = fn;
-            } else {
-                return false;
-            }
-        }
-        return filters[filterName] = fn;
-    };
+    diglett.registerFilter = Template.registerFilter;
 
-    diglett.removeFilter = function (filterName) {
-        var filters = Template.prototype.filter;
-        if (filters.hasOwnProperty(filterName)) {
-            return delete filters[filterName];
-        }
-    };
-
+    diglett.removeFilter = Template.removeFilter;
 
     function merge(target, source) {
         var key;
