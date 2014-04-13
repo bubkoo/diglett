@@ -78,6 +78,7 @@
             for (; start < end; start++) {
                 out.push(input[start]);
             }
+            return out;
         } else {
             return input;
         }
@@ -99,7 +100,6 @@
     if (currencyFilter && isFunction(currencyFilter)) {
         register('currency', currencyFilter);
     }
-
 
 
 })(this);

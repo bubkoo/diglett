@@ -73,17 +73,17 @@
     {{num | currency:￥}}
     <h3>limitTo</h3>
     <p>
-        限制字符串长度：{{longStr |  limitTo   }}
+        限制字符串长度：{{longStr | limitTo }}
     </p>
     <p>
-        限制字符串长度：{{longStr |   limitTo  : 4   }}
+        限制字符串长度：{{longStr | limitTo : 4 }}
     </p>
     <p>
         限制数组长度
     </p>
     <p>
     <ul>
-        {{#each list as item}}
+        {{#each list as item | limitTo : 4 }}
         <li>{{ item }}</li>
         {{/each}}
     </ul>
@@ -132,9 +132,77 @@
 
 </script>
 <script>
-    function complied() {
+    function complied(__, __method, __filter) {
 
-
+        'use strict';
+        __ = __ || {};
+        __filter = __filter || {};
+        __method = __method || {};
+        var __out = '';
+        var list = __.list, arrs = __.arrs,
+                $value = __.$value, isAdmin = __.isAdmin,
+                title = __.title, $index = __.$index, $idx = __.$idx,
+                $item = __.$item, escape = __.escape, str = __.str,
+                datetime = __.datetime,
+                num = __.num,
+                longStr = __.longStr,
+                item = __.item,
+                subtpl = __.subtpl,
+                subdata = __.subdata;
+        if (isAdmin) {
+            __out += '        {{ 内联显示}}    <h2>';
+            __out += title;
+            __out += '</h2><ul>';
+            __method["each"](list, function ($value, $index, $even, $odd, $first, $last) {
+                __out += '<li>索引 ';
+                __out += ($index + 1);
+                __out += ' ：';
+                __out += $value;
+                __out += '</li>';
+            });
+            __out += '</ul>';
+        }
+        __out += '<h2>        嵌套    </h2><ul>';
+        __method["each"](arrs, function ($value, $index, $even, $odd, $first, $last) {
+            __out += '<li><h3>类别：';
+            __out += $index;
+            __out += '</h3><ul>';
+            __method["each"]($value, function ($item, $idx, $even, $odd, $first, $last) {
+                __out += '<li>';
+                __out += ($idx + 1);
+                __out += ' ：';
+                __out += $item;
+                __out += '</li>';
+            });
+            __out += '</ul></li>';
+        });
+        __out += '</ul><h2> HTML </h2>';
+        __out += __filter["uppercase"].call(this, __filter["html"].call(this, escape));
+        __out += '<h2>        小写    </h2>';
+        __out += __filter["lowercase"].call(this, str);
+        __out += '<h2>        大写    </h2>';
+        __out += __filter["uppercase"].call(this, str);
+        __out += '<h2>Include 子模板</h2>';
+        __out += __method["include"](subtpl, subdata);
+        ;
+        __out += '<h2>高级filter示例</h2><h3>日期时间</h3>';
+        __out += __filter["datetime"].call(this, datetime, "ddd yyyy-MM-dd HH:mm:ss");
+        __out += '<h3>数字</h3>';
+        __out += __filter["number"].call(this, num, "2");
+        __out += '<h3>货币</h3>';
+        __out += __filter["currency"].call(this, num, "￥");
+        __out += '<h3>limitTo</h3><p>        限制字符串长度：';
+        __out += __filter["limitTo"].call(this, longStr);
+        __out += '</p><p>        限制字符串长度：';
+        __out += __filter["limitTo"].call(this, longStr, "4");
+        __out += '</p><p>        限制数组长度    </p><p><ul>';
+        __method["each"](__filter["limitTo"].call(this, list, "4"), function (item, $index, $even, $odd, $first, $last) {
+            __out += '<li>';
+            __out += item;
+            __out += '</li>';
+        });
+        __out += '</ul></p><br><br><br><br>';
+        return __out;
     }
 </script>
 </body>

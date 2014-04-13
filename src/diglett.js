@@ -28,7 +28,7 @@
         var openTag = this.options.openTag;
         var closeTag = this.options.closeTag;
         //
-        this.rEachStart = new RegExp(openTag + '\\s*[#@]each\\s+(\\S+)(?:\\s+as\\s+)?(\\S*)?\\s*(\\S*)?\\s*(?:\\|)?([.]*)?\\s*' + closeTag, 'igm');
+        this.rEachStart = new RegExp(openTag + '\\s*[#@]each\\s+(.*)' + closeTag, 'igm');
         this.rEachEnd = new RegExp(openTag + '\\s*\\/each\\s*' + closeTag, 'igm');
         this.rIfStart = new RegExp(openTag + '\\s*[#@]if\\s+(.*?)\\s*' + closeTag, 'igm');
         this.rIfEnd = new RegExp(openTag + '\\s*\\/if\\s*' + closeTag, 'igm');
@@ -131,6 +131,8 @@
 
         _unshell: function (source) {
             var that = this,
+                variables = [],
+                declare,
                 trim = function (str) {
                     str = str.replace(/^\s+/g, '');
                     for (var i = str.length - 1; i >= 0; i--) {
@@ -140,6 +142,41 @@
                         }
                     }
                     return str;
+                },
+                indexOf = function (array, item) {
+                    if (Array.prototype.indexOf) {
+                        return Array.prototype.indexOf.call(array, item);
+                    }
+
+                    var i,
+                        len;
+
+                    for (i = 0, len = array.length; i < len; i++) {
+                        if (array[i] === item) {
+                            return i;
+                        }
+                    }
+
+                    return -1;
+                },
+                addVarible = function (variable) {
+                    if (variable && indexOf(variables, variable) === -1) {
+                        variables.push(variable);
+                    }
+                },
+                variableAnalyze = function (input, exp) {
+                    var match = exp.match(/[A-Za-z_$][A-Za-z0-9_$]+/igm),
+                        variable;
+                    if (match) {
+                        while (variable = match.shift()) {
+                            addVarible(variable);
+                        }
+                    }
+                    // contains operator
+                    if (/[\+\-\*\/%!\?\^&~<>=,\(\)\[\]]/.test(exp)) {
+                        exp = '(' + exp + ')';
+                    }
+                    return exp;
                 },
                 handleFilter = function (value, filterStr) {
                     if (filterStr) {
@@ -168,23 +205,57 @@
                     }
                     return value;
                 };
+
             source = source
                 // each expression
-                // {{#each items}} // default key is $index, default $value
-                // {{#each items as $value}}
-                // {{#each items as $value $index}}
-                .replace(this.rEachStart, function (input, data, value, key, filter) {
-                    value = value || '$value';
-                    key = key || '$index';
-                    data = handleFilter(data, filter);
+                .replace(this.rEachStart, function (input, expression) {
+                    var index = expression.indexOf(' '),
+                        key = '$index',
+                        value = '$value',
+                        data,
+                        options;
+                    if (index > 0) {
+                        data = expression.substr(0, index);
+                        options = expression.substr(index + 1);
+
+                        // add variables
+                        variableAnalyze(input, data);
+
+                        // analyze options
+                        options = trim(options);
+                        if (options) {
+                            options = options.replace(/as\s+([A-Za-z_$][A-Za-z0-9_$]+)(\s+[A-Za-z_$][A-Za-z0-9_$]+)?/ig,
+                                function (input, v, k) {
+                                    v && (v = trim(v));
+                                    v && (value = v);
+                                    k && (k = trim(k));
+                                    k && (key = k);
+                                    return '';
+                                });
+                        }
+                        if (options) {
+                            options = trim(options);
+                        }
+                        // analyze filters
+                        if (options) {
+                            if (options[0] === '|') {
+                                options = options.substr(1);
+                            }
+                            data = handleFilter(data, options);
+                        }
+                    } else {
+                        data = variableAnalyze(input, expression);
+                    }
                     return '<% __method["each"](' + data + ', function(' + value + ', ' + key + ',$even,$odd,$first,$last){ %>';
                 })
                 .replace(this.rEachEnd, '<% }); %>')
 
                 // if expression
                 .replace(this.rIfStart, function (input, condition) {
+                    variableAnalyze(input, condition);
                     return '<% if(' + condition + ') { %>';
                 })
+
                 .replace(this.rIfEnd, '<% } %>')
 
                 // else expression
@@ -194,45 +265,38 @@
 
                 // else if expression
                 .replace(this.rElseIf, function (input, condition) {
+                    variableAnalyze(input, condition);
                     return '<% } else if(' + condition + ') { %>';
                 })
 
                 // interpolate
-                .replace(this.rInterpolate, function (input, variable) {
-                    variable = trim(variable);
-                    var index = variable.indexOf('|'),
+                .replace(this.rInterpolate, function (input, interpolate) {
+                    interpolate = trim(interpolate);
+                    var index = interpolate.indexOf('|'),
                         filterStr,
                         content;
+
                     if (index > 0) {
-                        content = variable.substr(0, index);
-                        filterStr = variable.substr(index + 1);
+                        content = interpolate.substr(0, index);
+                        filterStr = interpolate.substr(index + 1);
+                        content = variableAnalyze(input, content);
                         content = handleFilter(content, filterStr);
                     } else {
-                        content = variable;
+                        content = variableAnalyze(input, interpolate);
                     }
-//                    var filters = variable.split(/\s*\|\s*/g),
-//                        content = filters.shift(),
-//                        buffer,
-//                        filter,
-//                        filterStr,
-//                        args,
-//                        arg;
-//                    while (filterStr = filters.shift()) {
-//                        filterStr = filterStr.replace(/(['"]{1}?)([\s\S]*?)\1/g, function (input, quote, param) {
-//                            return param.replace(/:/g, 'X_#_#_X');
-//                        });
-//                        args = filterStr.split(/\s*:\s*/g);
-//                        filter = args.shift();
-//                        buffer = content;
-//                        while (arg = args.shift()) {
-//                            buffer += ',"' + arg.replace(/X_#_#_X/g, ':').replace(/'/g, "\'").replace(/\"/g, '"') + '"';
-//                        }
-//                        content = '__filter["' + filter + '"].call(this,' + buffer + ')';
-//                    }
                     return '<%=' + content + '%>';
                 })
 
                 .replace(this.rInclude, function (input, tpl, data) {
+                    // get variable
+                    if (tpl.match(/^(['"])#[\w:\-\.]+\1$/igm)) {
+                        tpl = tpl.replace(/['"]/g, '');
+                    } else {
+                        addVarible(tpl);
+                    }
+                    addVarible(data);
+
+                    // remove custom grammar
                     return '<%= __method["include"](' + tpl + ', ' + data + '); %>';
                 })
 
@@ -244,6 +308,20 @@
                     return that.options.openTag + text + that.options.closeTag;
                 });
 
+            // pre-declare variables
+            var i,
+                len = variables.length;
+            if (len > 0) {
+                declare = 'var ';
+                for (i = 0; i < len; i++) {
+                    declare += variables[i] + '=__.' + variables[i] + ',';
+                }
+            }
+            if (declare) {
+                source = '<%' + declare.substr(0, declare.length - 1) + '; %>' + source;
+            }
+
+            // if debug, then wrapped with try-catch
             if (this.options.debug !== true) {
                 source = '<% try { %>'
                     + source
@@ -296,82 +374,6 @@
             return buffer += "';return __out;";
         },
 
-        _getVariable: function (source) {
-            var variables = [],
-                declare,
-                indexOf = function (array, item) {
-                    if (Array.prototype.indexOf) {
-                        return Array.prototype.indexOf.call(array, item);
-                    }
-
-                    var i,
-                        len;
-
-                    for (i = 0, len = array.length; i < len; i++) {
-                        if (array[i] === item) {
-                            return i;
-                        }
-                    }
-
-                    return -1;
-                },
-
-                addVarible = function (variable) {
-                    if (variable && indexOf(variables, variable) === -1) {
-                        variables.push(variable);
-                    }
-                },
-
-                variableAnalyze = function (input, variable) {
-                    // variable name should start with A-Z, a-z, _ or $
-                    variable = variable.match(/[A-Za-z_$][A-Za-z0-9_$]+/igm)[0];
-                    addVarible(variable);
-                };
-
-            source.replace(this.rEachStart, variableAnalyze).
-                replace(this.rIfStart, variableAnalyze).
-                replace(this.rElseIf, variableAnalyze).
-                replace(this.rInterpolate, function (input, statement) {
-                    // filter
-                    statement = statement.split('|')[0];
-                    // match variables
-                    var match = statement.match(/[A-Za-z_$][A-Za-z0-9_$]+/igm),
-                        variable,
-                        i,
-                        len = match.length;
-                    for (i = 0; i < len; i++) {
-                        addVarible(match[i]);
-                        variable = match[i];
-                    }
-                    // contains operator
-                    if (/[\+\-\*\/%!\?\|\^&~<>=,\(\)\[\]]/.test(input)) {
-                        return '(' + input + ')';
-                    }
-                }).
-                replace(this.rInclude, function (input, tpl, data) {
-                    if (tpl && tpl.match(/^(['"])#[\w:\-\.]+\1$/igm)) {
-                        return input.replace('/[\'\"]/g', '');
-                    } else {
-                        addVarible(tpl);
-                    }
-                    addVarible(data);
-                });
-
-            var i,
-                len = variables.length;
-            if (len > 0) {
-                declare = 'var ';
-                for (i = 0; i < len; i++) {
-                    declare += variables[i] + '=__.' + variables[i] + ',';
-                }
-            }
-            if (declare) {
-                return '<%' + declare.substr(0, declare.length - 1) + '; %>';
-            } else {
-                return '';
-            }
-        },
-
         parse: function (source) {
 
             var that = this,
@@ -398,7 +400,6 @@
                 source = source.replace(/<!--.*?-->/g, '');
             }
 
-            source = that._getVariable(source) + source;
             source = that._unshell(source);
             source = that._toNative(source);
 
