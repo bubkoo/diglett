@@ -238,7 +238,7 @@
                         }
                         // analyze filters
                         if (options) {
-                            if (options[0] === '|') {
+                            if (options.charAt(0) == '|') {
                                 options = options.substr(1);
                             }
                             data = handleFilter(data, options);
