@@ -28,7 +28,7 @@
 
 <h2>{{ title }}</h2>
 <ul>
-    {{ #each list as $value $index}}
+    {{     #each    list    }}
     <li>索引 {{ $index + 1 }} ：{{ $value }}</li>
     {{/each}}
 </ul>
@@ -66,7 +66,7 @@
 
 <h2>高级filter示例</h2>
 <h3>日期时间</h3>
-{{ datetime |    datetime  :  "ddd yyyy-MM-dd HH:mm:ss"}}
+{{ datetime |    datetime  :  "ddd yyyy年MM-dd HH:mm:ss":asdsad:asdasd}}
 <h3>数字</h3>
 {{num | number:2}}
 <h3>货币</h3>
@@ -83,7 +83,7 @@
 </p>
 <p>
 <ul>
-    {{#each list as item | limitTo : 4 }}
+    {{#each list  | limitTo : 4 as item }}
     <li>{{ item }}</li>
     {{/each}}
 </ul>
@@ -98,7 +98,7 @@
     {{/each}}
 </p>
 <p>
-    升序：{{#each sortArr1 as item|orderBy}}
+    升序：{{#each sortArr1 as item|orderBy:+}}
     {{item}},
     {{/each}}
 </p>

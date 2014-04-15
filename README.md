@@ -1,4 +1,4 @@
 diglett
 =======
 
-sample template engine
+diglett is a front-end friendly template engine.
