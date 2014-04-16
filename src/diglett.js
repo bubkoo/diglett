@@ -15,16 +15,6 @@
     function Template(options) {
         this.options = options;
 
-        var filters = options.filter,
-            filter;
-        if (filters) {
-            for (filter in filters) {
-                if (filters.hasOwnProperty(filter)) {
-                    Template.registerFilter(filter, filters[filter], true);
-                }
-            }
-        }
-
         var openTag = this.options.openTag;
         var closeTag = this.options.closeTag;
         //
@@ -41,7 +31,7 @@
 
         var that = this;
 
-        Template.registerMethod('include', function (tpl, data) {
+        Template.prototype.method['include'] = function (tpl, data) {
             var useCache = that.options.cache,
                 cached;
             if (useCache) {
@@ -54,7 +44,7 @@
                 Template.cache[tpl] = cached;
             }
             return cached.render(data);
-        }, true);
+        };
     }
 
     // cache the compiled template
@@ -129,6 +119,9 @@
             }
         },
 
+        include: function () {
+        },
+
         _unshell: function (source) {
             var that = this,
                 variables = [],
@@ -191,14 +184,18 @@
                             arg;
                         while (filterGroup = filterGroups.shift()) {
                             filterGroup = filterGroup.replace(/(['"]{1}?)([\s\S]*?)\1/g, function (input, quote, param) {
-                                return param.replace(/:/g, 'X_#_#_X');
+                                return param.replace(/:/g, '\u00A4').replace(/\|/g, '\u00AA');
                             });
                             args = filterGroup.split(/\s*:\s*/g);
                             filter = args.shift();
 
                             buffer = value;
                             while (arg = args.shift()) {
-                                buffer += ',"' + arg.replace(/X_#_#_X/g, ':').replace(/'/g, "\'").replace(/\"/g, '"') + '"';
+                                buffer += ',"' + arg
+                                    .replace(/\u00A4/g, ':')
+                                    .replace(/\u00AA/g, '|')
+                                    .replace(/'/g, "\'")
+                                    .replace(/\"/g, '"') + '"';
                             }
                             value = '__filter["' + filter + '"].call(this,' + buffer + ')';
                         }
@@ -256,8 +253,6 @@
                     return '<% if(' + condition + ') { %>';
                 })
 
-                .replace(this.rIfEnd, '<% } %>')
-
                 // else expression
                 .replace(this.rElse, function () {
                     return '<% } else { %>';
@@ -268,6 +263,8 @@
                     variableAnalyze(input, condition);
                     return '<% } else if(' + condition + ') { %>';
                 })
+
+                .replace(this.rIfEnd, '<% } %>')
 
                 // interpolate
                 .replace(this.rInterpolate, function (input, interpolate) {
@@ -339,17 +336,6 @@
             buffer += "__filter = __filter || {};";
             buffer += "__method = __method || {};";
             buffer += "var __out='';__out+='";
-
-//            buffer += source
-//                .replace(/\\/g, '\\\\')
-//                .replace(/[\r\t\n]+/g, '')
-//                //.replace(/'(?=[^%]*%>)/g, '\t')
-//                //.split("'").join("\\'")
-//                //.split("\t").join("'")
-//                .replace(/<%=(.+?)%>/g, "';__out+=$1; __out+='")
-//                .split('<%').join("';")
-//                .split('%>').join("__out+='") +
-//                "';return __out.replace(/[\\r\\n]\\s+[\\r\\n]/g, '\\r\\n');";
 
             buffer += source
                 .replace(/\\/g, '\\\\')
@@ -437,26 +423,6 @@
             return delete filters[filterName];
         }
     };
-
-    Template.registerMethod = function (methodName, fn, overwrite) {
-        var methods = Template.prototype.method;
-        if (methods.hasOwnProperty(methodName)) {
-            if (overwrite === true) {
-                return methods[methodName] = fn;
-            } else {
-                return false;
-            }
-        }
-        return methods[methodName] = fn;
-    };
-
-    Template.removeMethod = function (methodName) {
-        var methods = Template.prototype.method;
-        if (methods.hasOwnProperty(methodName)) {
-            return delete methods[methodName];
-        }
-    };
-
 
     // create a local object, to be exported or attached to the global object later
     var diglett = function (source, data) {
