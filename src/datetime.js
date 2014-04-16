@@ -9,6 +9,7 @@
 
     datetime.options = {
         format: 'yyyy-MM-dd HH:mm:ss',
+        // li8n settings
         daySeparators: ['am', 'pm'],
         dayNames: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
         dayNamesShort: ['Sun', 'Mon', 'Tue', 'Wed', 'Thr', 'Fri', 'Sat'],
