@@ -194,10 +194,6 @@
         return isNaN(val) ? base : val;
     }
 
-    function int(value) {
-        return parseInt(value, 10);
-    }
-
     function merge(target, source) {
         var key;
         target = target || {};
