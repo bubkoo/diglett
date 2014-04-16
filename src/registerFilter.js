@@ -6,7 +6,6 @@
 
     var toString = Object.prototype.toString;
 
-
     function isFunction(val) {
         return toString.call(val) === '[object Function]';
     }
