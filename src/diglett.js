@@ -168,7 +168,7 @@
                     }
                 },
                 variableAnalyze = function (input, exp) {
-                    var match = exp.match(/[A-Za-z_$][A-Za-z0-9_$]+/igm),
+                    var match = exp.match(/[A-Za-z_$][A-Za-z0-9_$]*/igm),
                         variable;
                     if (match) {
                         while (variable = match.shift()) {
@@ -231,7 +231,7 @@
                         // analyze options
                         options = trim(options);
                         if (options) {
-                            options = options.replace(/as\s+([A-Za-z_$][A-Za-z0-9_$]+)(\s+[A-Za-z_$][A-Za-z0-9_$]+)?/ig,
+                            options = options.replace(/as\s+([A-Za-z_$][A-Za-z0-9_$]*)(\s+[A-Za-z_$][A-Za-z0-9_$]*)?/ig,
                                 function (input, v, k) {
                                     v && (v = trim(v));
                                     v && (value = v);
