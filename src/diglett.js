@@ -65,6 +65,15 @@
                     isArray = Array.isArray || function (obj) {
                         return '[object Array]' === Object.prototype.toString.call(obj);
                     },
+                    getObjLength = function (obj) {
+                        var c = 0;
+                        for (var j in obj) {
+                            if (obj.hasOwnProperty(j)) {
+                                c++;
+                            }
+                        }
+                        return c;
+                    },
                     setFlag = function (index, len) {
                         if ((index + 1) % 2 === 0) {
                             even = true;
@@ -82,8 +91,9 @@
                         callback.call(data, data[i], i, even, odd, first, last);
                     }
                 } else {
+                    l = getObjLength(data);
                     for (i in data) {
-                        setFlag(counter, counter);
+                        setFlag(counter, l);
                         if (data.hasOwnProperty(i)) {
                             callback.call(data, data[i], i, even, odd, first, last);
                         }
