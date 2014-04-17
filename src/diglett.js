@@ -18,7 +18,7 @@
         var openTag = this.options.openTag;
         var closeTag = this.options.closeTag;
         //
-        this.rEachStart = new RegExp(openTag + '\\s*[#@]each\\s+(.*)' + closeTag, 'igm');
+        this.rEachStart = new RegExp(openTag + '\\s*[#@]each\\s+(.*?)' + closeTag, 'igm');
         this.rEachEnd = new RegExp(openTag + '\\s*\\/each\\s*' + closeTag, 'igm');
         this.rIfStart = new RegExp(openTag + '\\s*[#@]if\\s+(.*?)\\s*' + closeTag, 'igm');
         this.rIfEnd = new RegExp(openTag + '\\s*\\/if\\s*' + closeTag, 'igm');
