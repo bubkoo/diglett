@@ -129,9 +129,6 @@
             }
         },
 
-        include: function () {
-        },
-
         _unshell: function (source) {
             var that = this,
                 variables = [],
@@ -359,8 +356,8 @@
                     .replace(/>\s+</g, '><')
                     .replace(/(__out\+=')\s+</g, '$1<')
                     .replace(/>\s+'/g, '>\'')
-                    .replace(/>\s+\b/g, '> ')
-                    .replace(/\b\s+</g, ' <');
+                    .replace(/>\s+(\S)/g, '> $1')
+                    .replace(/(\S)\s+</g, '$1 <');
             } else {
                 buffer = buffer
                     .replace(/[\r\n]+/g, ' ')
