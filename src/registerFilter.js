@@ -33,8 +33,8 @@
     function copyArray(array) {
         var arrayCopy = [],
             i = 0,
-            l = array.length;
-        for (; i < l; i++) {
+            len = array.length;
+        for (; i < len; i++) {
             arrayCopy.push(array[i]);
         }
         return arrayCopy;
@@ -98,162 +98,164 @@
     }
 
 
-    register('filter', function (array, expression) {
-        if (!isArray(array) || !expression) {
+    register('filter', function (array) {
+
+        if (!isArray(array)) {
             return array;
         }
-        if (!(expression = trim(expression))) {
-            expression = '+';
-        } else {
-            var userFilter = diglett.getUserFilter(expression);
-            if (userFilter && isFunction(userFilter)) {
-                expression = userFilter;
+
+        var expressions = Array.prototype.slice.call(arguments, 1),
+            i = 0,
+            len = expressions.length,
+            getUserFilter = function (name) {
+                var cache = diglett.userFilter || (diglett.userFilter = {});
+                return cache[name];
+            };
+
+
+        if (len === 1) {
+            var cusFilter = getUserFilter(expressions[0]);
+            if (cusFilter && isFunction(cusFilter)) {
+                return cusFilter(array);
             }
         }
 
-        if (isString(expression)) {
-            var out = [],
-                sections = expression.split(','),
-                rField = /(\S+?)([>=<^]{1,2})(.+)/g,
-                field,
-                compares = [],
-                compare,
-                operator,
-                value,
-                matches,
-                i = 0,
-                l = sections.length;
-            for (; i < l; i++) {
-                matches = rField.exec(sections[i]);// sections[i].match(rField);
-                if (matches) {
-                    field = matches[1];
-                    operator = matches[2];
-                    value = matches[3];
+        var
+            out = [],
+            rField = /(\S+?)\s*([>=<^]{1,2})\s*(.+)/g,
+            field,
+            operator,
+            value,
+            compares = [],
+            compare,
+            matches;
 
-                    compare = (function (field, operator, value) {
+        for (; i < len; i++) {
+//            matches = rField.exec(expressions[i]);
+            matches = expressions[i].match(/(\S+?)\s*([>=<^]{1,2})\s*(.+)/);
+            if (matches) {
+                field = matches[1];
+                operator = matches[2];
+                value = matches[3];
 
-                        switch (operator) {
-                            case '>':
-                                return function (obj) {
-                                    if (!isObject(obj)) {
-                                        return true;
-                                    }
-                                    var comp = compareEx(obj[field], value);
-                                    return comp === 1;
-                                };
-                                break;
-                            case '>=':
-                                return function (obj) {
-                                    if (!isObject(obj)) {
-                                        return true;
-                                    }
-                                    var comp = compareEx(obj[field], value);
-                                    return comp === 1 || comp === 0;
-                                };
-                                break;
-                            case '<':
-                                return function (obj) {
-                                    if (!isObject(obj)) {
-                                        return true;
-                                    }
-                                    var comp = compareEx(obj[field], value);
-                                    return comp === -1;
-                                };
-                                break;
-                            case '<=':
-                                return function (obj) {
-                                    if (!isObject(obj)) {
-                                        return true;
-                                    }
-                                    var comp = compareEx(obj[field], value);
-                                    return comp === -1 || comp === 0;
-                                };
-                                break;
-                            case '<>':
-                                return function (obj) {
-                                    if (!isObject(obj)) {
-                                        return true;
-                                    }
-                                    var comp = compareEx(obj[field], value);
-                                    return  comp !== 0;
-                                };
-                                break;
-                            case '=':
-                            case '==':
-                                return function (obj) {
-                                    if (!isObject(obj)) {
-                                        return true;
-                                    }
-                                    var comp = compareEx(obj[field], value);
-                                    return comp === 0;
-                                };
-                                break;
-                            case '^': // contains
-                            case '^^':
-                                return function (obj) {
-                                    if (!isObject(obj)) {
-                                        return true;
-                                    }
+                compare = (function (field, operator, value) {
 
-                                    function contains(value1, value2) {
-                                        var type = typeof value1;
-                                        if (type === 'string') {
-                                            return value1.toLowerCase().indexOf(value2.toLowerCase()) > -1;
-                                        } else if (isArray(value1)) {
-                                            var nativeItem;
-                                            while (nativeItem = native.shift()) {
-                                                if (compareEx(nativeItem, value2) === 0) {
-                                                    return true;
-                                                }
+                    switch (operator) {
+                        case '>':
+                            return function (obj) {
+                                if (!isObject(obj)) {
+                                    return true;
+                                }
+                                var comp = compareEx(obj[field], value);
+                                return comp === 1;
+                            };
+                            break;
+                        case '>=':
+                            return function (obj) {
+                                if (!isObject(obj)) {
+                                    return true;
+                                }
+                                var comp = compareEx(obj[field], value);
+                                return comp === 1 || comp === 0;
+                            };
+                            break;
+                        case '<':
+                            return function (obj) {
+                                if (!isObject(obj)) {
+                                    return true;
+                                }
+                                var comp = compareEx(obj[field], value);
+                                return comp === -1;
+                            };
+                            break;
+                        case '<=':
+                            return function (obj) {
+                                if (!isObject(obj)) {
+                                    return true;
+                                }
+                                var comp = compareEx(obj[field], value);
+                                return comp === -1 || comp === 0;
+                            };
+                            break;
+                        case '<>':
+                            return function (obj) {
+                                if (!isObject(obj)) {
+                                    return true;
+                                }
+                                var comp = compareEx(obj[field], value);
+                                return  comp !== 0;
+                            };
+                            break;
+                        case '=':
+                        case '==':
+                            return function (obj) {
+                                if (!isObject(obj)) {
+                                    return true;
+                                }
+                                var comp = compareEx(obj[field], value);
+                                return comp === 0;
+                            };
+                            break;
+                        case '^': // contains
+                        case '^^':
+                            return function (obj) {
+                                if (!isObject(obj)) {
+                                    return true;
+                                }
+
+                                function contains(value1, value2) {
+                                    var type = typeof value1;
+                                    if (type === 'string') {
+                                        return value1.toLowerCase().indexOf(value2.toLowerCase()) > -1;
+                                    } else if (isArray(value1)) {
+                                        var nativeItem;
+                                        while (nativeItem = value1.shift()) {
+                                            if (compareEx(nativeItem, value2) === 0) {
+                                                return true;
                                             }
-                                            return false;
-                                        } else if (type === 'object') {
-                                            return contains(value1[field], value2);
-                                        } else if (type === 'undefined') {
-                                            return false;
                                         }
-                                        return true;
+                                        return false;
+                                    } else if (type === 'object') {
+                                        return contains(value1[field], value2);
+                                    } else if (type === 'undefined') {
+                                        return false;
                                     }
+                                    return true;
+                                }
 
-                                    return contains(obj[field], value);
-                                };
-                                break;
-                            default :
-                                break;
-                        }
-                    })(field, operator, value);
-
-                    if (compare) {
-                        compares.push(compare);
+                                return contains(obj[field], value);
+                            };
+                            break;
+                        default :
+                            break;
                     }
+                })(field, operator, value);
+
+                if (compare) {
+                    compares.push(compare);
                 }
             }
-
-            i = 0;
-            l = array.length;
-            var j = 0,
-                k = compares.length,
-                flag;
-            for (; i < l; i++) {
-                flag = true;
-                for (j = 0; j < k; j++) {
-                    if (!compares[j](array[i])) {
-                        flag = false;
-                        break;
-                    }
-                }
-                if (flag) {
-                    out.push(array[i]);
-                }
-            }
-            return out;
-
-        } else if (isFunction(expression)) {
-            return expression(array);
         }
 
-        return array;
+        i = 0;
+        len = array.length;
+        var j = 0,
+            k = compares.length,
+            flag;
 
+        for (; i < len; i++) {
+            flag = true;
+            for (j = 0; j < k; j++) {
+                if (!compares[j](array[i])) {
+                    flag = false;
+                    break;
+                }
+            }
+            if (flag) {
+                out.push(array[i]);
+            }
+        }
+        return out;
     });
 
     diglett.addUserFilter = function (name, fn, overwrite) {
@@ -267,11 +269,6 @@
         }
     };
 
-    diglett.getUserFilter = function (name) {
-        var cache = diglett.userFilter || (diglett.userFilter = {});
-        return cache[name];
-    };
-
     diglett.removeUserFilter = function (name) {
         var cache = diglett.userFilter || (diglett.userFilter = {});
         if (cache.hasOwnProperty(name)) {
@@ -279,79 +276,85 @@
         }
     };
 
-    register('orderBy', function (array, sortFields) {
+    register('orderBy', function (array) {
             // not an array or not assigned sort predicate
             if (!isArray(array)) {
                 return array;
             }
-            if (!sortFields || !(sortFields = trim(sortFields))) {
-                sortFields = '+';
-            } else {
-                var cusOrder = diglett.getUserOrderBy(sortFields);
-                if (cusOrder && isFunction(cusOrder)) {
-                    sortFields = cusOrder;
+
+            var sortFields = Array.prototype.slice.call(arguments, 1),
+                getUserOrderBy = function (name) {
+                    var cache = diglett.userOrderBy || (diglett.userOrderBy = {});
+                    return cache[name];
+                },
+                reverse,
+                i = 0,
+                len = sortFields.length;
+
+            if (len > 0) {
+                // the last argument is boolean
+                if (typeof sortFields[len - 1] === 'boolean') {
+                    reverse = sortFields[len - 1] === true;
+                    sortFields.pop();
+                    len = sortFields.length;
                 }
             }
 
             var arrayCopy = copyArray(array);
 
-            if (isString(sortFields)) {
-                sortFields = sortFields.replace(/\s*/g, '');
-                var fields = sortFields.split(','),
-                    sorters = [],
-                    sorter,
-                    descending = false,
-                    flag,
-                    field,
-                    i = 0,
-                    l = fields.length;
-                for (; i < l; i++) {
-                    field = fields[i];
-                    flag = field.charAt(0);
-                    if (flag == '+' || flag == '-') {
-                        descending = flag == '-';
-                        field = field.substring(1);
-                    }
-
-                    sorter = (function (field, descending) {
-                        return function (obj1, obj2) {
-                            if (isObject(obj1)) {
-                                obj1 = obj1[field];
-                            }
-                            if (isObject(obj2)) {
-                                obj2 = obj2[field];
-                            }
-                            if (descending) {
-                                return compare(obj2, obj1);
-                            }
-                            return compare(obj1, obj2);
-                        }
-                    })(field, descending);
-
-                    sorters.push(sorter);
+            if (len === 1) {
+                var cusOrder = getUserOrderBy(sortFields[0]);
+                if (cusOrder && isFunction(cusOrder)) {
+                    return arrayCopy.sort(cusOrder);
                 }
-
-                arrayCopy.sort(doCompare);
-
-                function doCompare(obj1, obj2) {
-                    var i = 0,
-                        l = sorters.length;
-                    for (; i < l; i++) {
-                        var comp = sorters[i](obj1, obj2);
-                        if (comp !== 0) {
-                            return comp;
-                        }
-                    }
-                    return 0;
-                }
-
+            } else if (len === 0) {
+                sortFields.push('+');
+                len = 1;
             }
 
-            else if (isFunction(sortFields)) {
-                arrayCopy.sort(sortFields);
+            var sorters = [],
+                sorter,
+                flag,
+                field;
+            for (; i < len; i++) {
+                field = sortFields[i];
+                flag = field.charAt(0);
+                if (flag === '+' || flag === '-') {
+                    reverse = flag === '-' || reverse;
+                    field = field.substring(1);
+                }
+
+                sorter = (function (field, descending) {
+                    return function (obj1, obj2) {
+                        if (isObject(obj1)) {
+                            obj1 = obj1[field];
+                        }
+                        if (isObject(obj2)) {
+                            obj2 = obj2[field];
+                        }
+                        if (descending) {
+                            return compare(obj2, obj1);
+                        }
+                        return compare(obj1, obj2);
+                    }
+                })(field, reverse);
+
+                sorters.push(sorter);
             }
 
-            return arrayCopy;
+            function doCompare(obj1, obj2) {
+                var i = 0,
+                    len = sorters.length;
+                for (; i < len; i++) {
+                    var comp = sorters[i](obj1, obj2);
+                    if (comp !== 0) {
+                        return comp;
+                    }
+                }
+                return 0;
+            }
+
+            return arrayCopy.sort(doCompare);
         }
     );
 
@@ -364,11 +367,6 @@
         } else {
             cache[name] = fn;
         }
-    };
-
-    diglett.getUserOrderBy = function (name) {
-        var cache = diglett.userOrderBy || (diglett.userOrderBy = {});
-        return cache[name];
     };
 
     diglett.removeUserOrderBy = function (name) {

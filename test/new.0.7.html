@@ -28,7 +28,7 @@
 
 <h2>{{ title }}</h2>
 <ul>
-    {{     #each    list    }}
+    {{ #each list }}
     <li>索引 {{ $index + 1 }} ：{{ $value }}</li>
     {{/each}}
 </ul>
@@ -83,7 +83,7 @@
 </p>
 <p>
 <ul>
-    {{#each list  | limitTo : 4 as item }}
+    {{#each list | limitTo : 4 as item }}
     <li>{{ item }}</li>
     {{/each}}
 </ul>
@@ -145,7 +145,7 @@
             Age
         </td>
     </tr>
-    {{#each sortArr2 as item | orderBy:name}}
+    {{#each sortArr2 as item | orderBy   :    sortfield  :  reverse    }}
     <tr>
         <td>{{item.name}}</td>
         <td>{{item.phone}}</td>
@@ -168,7 +168,7 @@
             Age
         </td>
     </tr>
-    {{#each sortArr2 as item | orderBy:name,-phone}}
+    {{#each sortArr2 as item | orderBy  :   name  :  -phone}}
     <tr>
         <td>{{item.name}}</td>
         <td>{{item.phone}}</td>
@@ -176,6 +176,7 @@
     </tr>
     {{/each}}
 </table>
+<br>
 <p>
     自定义排序
 </p>
@@ -191,7 +192,7 @@
             Age
         </td>
     </tr>
-    {{#each sortArr2 as item | orderBy:cusOrderBy}}
+    {{#each sortArr2 as item | orderBy  :   cusOrderBy}}
     <tr>
         <td>{{item.name}}</td>
         <td>{{item.phone}}</td>
@@ -215,7 +216,7 @@
             Age
         </td>
     </tr>
-    {{#each sortArr2 as item | filter:name^M}}
+    {{#each sortArr2 as item | filter :   name ^ M   :   phone ^ 4}}
     <tr>
         <td>{{item.name}}</td>
         <td>{{item.phone}}</td>
@@ -223,7 +224,6 @@
     </tr>
     {{/each}}
 </table>
-<br>
 <br>
 <br>
 <br>
@@ -266,8 +266,9 @@
             {name: 'Mike', phone: '555-6321', age: 21},
             {name: 'Mary', phone: '555-9876', age: 19},
             {name: 'John', phone: '555-1212', age: 10}
-
-        ]
+        ],
+        sortfield: 'name',
+        reverse: true
     };
 
     diglett.addUserOrderBy('cusOrderBy', function (obj1, obj2) {
@@ -281,7 +282,13 @@
     document.getElementById('content').innerHTML = html;
 
 </script>
+<script type="text/template">
+
+
+</script>
 <script>
+
+
     function complied(__, __method, __filter) {
 
     }

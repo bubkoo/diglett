@@ -56,7 +56,7 @@
         method: {
             each: function (data, callback) {
                 var i,
-                    l,
+                    len,
                     counter = 0,
                     even = false,
                     odd = false,
@@ -86,14 +86,14 @@
                         index === (len - 1) && (last = true);
                     };
                 if (isArray(data)) {
-                    for (i = 0, l = data.length; i < l; i++) {
-                        setFlag(i, l);
+                    for (i = 0, len = data.length; i < len; i++) {
+                        setFlag(i, len);
                         callback.call(data, data[i], i, even, odd, first, last);
                     }
                 } else {
-                    l = getObjLength(data);
+                    len = getObjLength(data);
                     for (i in data) {
-                        setFlag(counter, l);
+                        setFlag(counter, len);
                         if (data.hasOwnProperty(i)) {
                             callback.call(data, data[i], i, even, odd, first, last);
                         }
@@ -101,6 +101,41 @@
                     }
                 }
             },
+
+            getFilterArg: function (data, arg) {
+
+                function getValue(data, fields) {
+                    var parts = fields.split('.'),
+                        part,
+                        i = 0,
+                        len = parts.length;
+                    for (; i < len; i++) {
+                        part = parts[i];
+                        if (data.hasOwnProperty(part)) {
+                            if (i === len - 1) {
+                                return data[part];
+                            } else {
+                                data = data[part];
+                            }
+                        } else {
+                            return fields;
+                        }
+                    }
+                }
+
+                // +field -field
+                // field <> param
+                if (arg.match(/[A-Za-z_$][A-Za-z0-9_$\.]*/g)) {
+                    // 不含 + - < = > 这些特殊符号
+                    return getValue(data, arg);
+                } else {
+                    // 否则返回的参数值一定是字符串，进行替换操作
+                    return arg.replace(/[A-Za-z_$][A-Za-z0-9_$\.]*/g, function (input) {
+                        return getValue(data, input);
+                    });
+                }
+            },
+
             throw: _throw
         },
 
@@ -183,28 +218,66 @@
                         filterStr = trim(filterStr);
                     }
                     if (filterStr) {
+                        // 替换单引号或双引号中的特殊值 : |
+                        filterStr = filterStr.replace(/(['"]{1}?)([\s\S]*?)\1/g, function (input, quote, param) {
+                            param = param
+                                .replace(/:/g, '\u00A4')
+                                .replace(/\|/g, '\u00AA');
+                            return quote + param + quote;
+                        });
+
                         var filterGroups = filterStr.split(/\s*\|\s*/g),
                             filterGroup,
                             filter,
                             buffer,
                             args,
-                            arg;
+                            arg,
+                            handleArg = function (arg) {
+                                var start = arg.charAt(0),
+                                    end = arg.charAt(arg.length - 1);
+                                if (start === end && (start === '"' || start === "'")) {
+                                    // 用单引号或双引号包裹的参数直接返回
+                                    arg = arg.replace(/\u00AA/g, '|').replace(/\u00A4/g, ':');
+                                } else {
+                                    if (arg.match(/([A-Za-z_$][A-Za-z0-9_$\.]*)/g)) {
+                                        arg = '__method["getFilterArg"](__,"' + arg + '")';
+                                    } else {
+                                        arg = '"' + arg + '"';
+                                    }
+                                }
+                                return arg;//.replace(/'/g, "\'").replace(/\"/g, '"');
+                            };
+
                         while (filterGroup = filterGroups.shift()) {
-                            filterGroup = filterGroup.replace(/(['"]{1}?)([\s\S]*?)\1/g, function (input, quote, param) {
-                                return param.replace(/:/g, '\u00A4').replace(/\|/g, '\u00AA');
-                            });
+                            // 替换单引号或双引号中的特殊值 : | .
+//                            filterGroup = filterGroup.replace(reg, function (input, quote, param) {
+//                                return param
+//                                    .replace(/:/g, '\u00A4')
+//                                    .replace(/\|/g, '\u00AA')
+//                                    .replace(/\./g, '\u00A7');
+//                            });
+                            // 得到过滤器的参数
                             args = filterGroup.split(/\s*:\s*/g);
                             filter = args.shift();
 
                             buffer = value;
                             while (arg = args.shift()) {
-                                buffer += ',"' + arg
-                                    .replace(/\u00A4/g, ':')
-                                    .replace(/\u00AA/g, '|')
-                                    .replace(/'/g, "\'")
-                                    .replace(/\"/g, '"') + '"';
+                                buffer += ', ' + handleArg(arg);
                             }
                             value = '__filter["' + filter + '"].call(this,' + buffer + ')';
+
+
+//                            filter = args.shift();
+//
+//                            buffer = value;
+//                            while (arg = args.shift()) {
+//                                buffer += ',"' + arg
+//                                    .replace(/\u00A4/g, ':')
+//                                    .replace(/\u00AA/g, '|')
+//                                    .replace(/'/g, "\'")
+//                                    .replace(/\"/g, '"') + '"';
+//                            }
+//                            value = '__filter["' + filter + '"].call(this,' + buffer + ')';
                         }
                     }
                     return value;
