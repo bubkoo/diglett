@@ -88,7 +88,7 @@
                     return date.getSeconds();
                 case 'ss':
                     return zeroize(date.getSeconds());
-                case 'l':
+                case 'len':
                     return zeroize(date.getMilliseconds(), 3);
                 case 'L':
                     var m = date.getMilliseconds();
@@ -129,9 +129,9 @@
         value = '' + value; // toString
 
         var i,
-            l = value.length,
+            len = value.length,
             zeros = '';
-        for (i = 0; i < (length - l); i++) {
+        for (i = 0; i < (length - len); i++) {
             zeros += '0';
         }
         return zeros + value;
