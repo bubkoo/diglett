@@ -478,10 +478,10 @@
             };
 
             if (useCache) {
-                Template.cache[source] = that;
+                Template.cache[source] = that.render;
             }
 
-            return that;
+            return that.render;
         }
     };
 

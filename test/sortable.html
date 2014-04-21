@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <title>Sort</title>
+    <script src="../src/diglett.js"></script>
+    <script src="../src/currency.js"></script>
+    <script src="../src/datetime.js"></script>
+    <script src="../src/registerFilter.js"></script>
+    <script src="../../lib/jquery-1.11.0.min.js"></script>
+    <style>
+        table {
+            font-size: 12px;
+            border: 1px solid #ddd;
+            padding: 0;
+            margin: 0;
+            border-collapse: collapse;
+            border-spacing: 0;
+        }
+
+        table tr th,
+        table tr td {
+            width: 120px;
+            border: 1px solid #ddd;
+            line-height: 25px;
+            padding: 0 5px;
+        }
+
+        table tr th {
+            background: #eee;
+            cursor: pointer;
+            border-bottom-width: 2px;
+        }
+
+        table tr th.sorting {
+            background: url(images/sorting.png) no-repeat right center #eee;
+        }
+        table tr th.sorting-asc {
+            background: url(images/sorting-asc.png) no-repeat right center #eee;
+        }
+        table tr th.sorting-desc {
+            background: url(images/sorting-desc.png) no-repeat right center #eee;
+        }
+    </style>
+</head>
+<body>
+<div id="content">
+</div>
+<script id="tpl" type="text/template">
+    <table>
+        <thead>
+        <tr>
+            <th>#</th>
+            <th class="{{#if sortField==='name'}}{{#if reverse}}sorting-desc{{#else}}sorting-asc{{/if}}{{#else}}sorting{{/if}}">Name</th>
+            <th class="{{#if sortField==='phone'}}{{#if reverse}}sorting-desc{{#else}}sorting-asc{{/if}}{{#else}}sorting{{/if}}">Phone</th>
+            <th class="{{#if sortField==='age'}}{{#if reverse}}sorting-desc{{#else}}sorting-asc{{/if}}{{#else}}sorting{{/if}}">Age</th>
+        </tr>
+        </thead>
+        <tbody>
+        {{#each sortArr as item | orderBy:sortField:reverse}}
+        <tr>
+            <td> index{{$index+1}}</td>
+            <td>{{item.name}}</td>
+            <td>{{item.phone}}</td>
+            <td>{{item.age}}</td>
+        </tr>
+        {{/each}}
+        </tbody>
+    </table>
+</script>
+<script>
+
+    var data = {
+        sortArr: [
+            {name: 'Adam', phone: '555-5678', age: 35},
+            {name: 'Julie', phone: '555-8765', age: 29},
+            {name: 'Mike', phone: '555-4321', age: 21},
+            {name: 'Mike', phone: '555-2321', age: 21},
+            {name: 'Mike', phone: '555-6321', age: 21},
+            {name: 'Mary', phone: '555-9876', age: 19},
+            {name: 'John', phone: '555-1212', age: 10}
+        ],
+        sortField: '',
+        reverse: false
+    };
+
+    var render = diglett.compile('#tpl');
+
+    $('#content').html(render(data));
+
+
+    $('#content').on('click', 'table thead tr th', function () {
+        var index = $(this).index();
+        console.log(index);
+        switch (index) {
+            case 1:
+                data.sortField = 'name';
+                break;
+            case 2:
+                data.sortField = 'phone';
+                break;
+            case 3:
+                data.sortField = 'age';
+                break;
+            default:
+                data.sortField = '';
+                break;
+        }
+        data.reverse = !data.reverse;
+        $('#content').empty().html(render(data));
+    });
+</script>
+</body>
+</html>
