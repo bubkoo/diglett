@@ -43,7 +43,7 @@
             if (useCache) {
                 Template.cache[tpl] = cached;
             }
-            return cached.render(data);
+            return cached(data);
         };
     }
 
@@ -560,7 +560,7 @@
     };
 
     diglett.render = function (source, data, options) {
-        return this.compile(source, options).render(data, options);
+        return this.compile(source, options)(data, options);
     };
 
     diglett.registerFilter = Template.registerFilter;

@@ -429,10 +429,24 @@
     if (numberFilter && isFunction(numberFilter)) {
         register('number', numberFilter);
     }
+
     var currencyFilter = global.currency && global.currency.formatMoney;
     if (currencyFilter && isFunction(currencyFilter)) {
         register('currency', currencyFilter);
     }
 
 
+    if (typeof define === 'function') {
+        // RequireJS && SeaJS
+        define('registerFilter', 'diglett', function () {
+            return diglett;
+        });
+    } else if (typeof exports !== 'undefined') {
+        if (typeof module !== 'undefined' && module.exports) {
+            // NodeJS
+            module.exports = diglett;
+        }
+    } else {
+        global.diglett = diglett;
+    }
 })(this);

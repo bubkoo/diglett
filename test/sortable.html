@@ -20,27 +20,39 @@
 
         table tr th,
         table tr td {
-            width: 120px;
             border: 1px solid #ddd;
             line-height: 25px;
-            padding: 0 5px;
+            padding: 0 8px;
         }
 
         table tr th {
+            width: 120px;
             background: #eee;
             cursor: pointer;
             border-bottom-width: 2px;
         }
 
+        table tr th:first-child {
+            width: 30px;
+            cursor: default;
+        }
+
+        table tr td:first-child{
+            text-align: center;
+        }
+
         table tr th.sorting {
             background: url(images/sorting.png) no-repeat right center #eee;
         }
+
         table tr th.sorting-asc {
             background: url(images/sorting-asc.png) no-repeat right center #eee;
         }
+
         table tr th.sorting-desc {
             background: url(images/sorting-desc.png) no-repeat right center #eee;
         }
+
     </style>
 </head>
 <body>
@@ -51,15 +63,21 @@
         <thead>
         <tr>
             <th>#</th>
-            <th class="{{#if sortField==='name'}}{{#if reverse}}sorting-desc{{#else}}sorting-asc{{/if}}{{#else}}sorting{{/if}}">Name</th>
-            <th class="{{#if sortField==='phone'}}{{#if reverse}}sorting-desc{{#else}}sorting-asc{{/if}}{{#else}}sorting{{/if}}">Phone</th>
-            <th class="{{#if sortField==='age'}}{{#if reverse}}sorting-desc{{#else}}sorting-asc{{/if}}{{#else}}sorting{{/if}}">Age</th>
+            <th class="{{#if sortField==='name'}}{{#if reverse}}sorting-desc{{#else}}sorting-asc{{/if}}{{#else}}sorting{{/if}}">
+                Name
+            </th>
+            <th class="{{#if sortField==='phone'}}{{#if reverse}}sorting-desc{{#else}}sorting-asc{{/if}}{{#else}}sorting{{/if}}">
+                Phone
+            </th>
+            <th class="{{#if sortField==='age'}}{{#if reverse}}sorting-desc{{#else}}sorting-asc{{/if}}{{#else}}sorting{{/if}}">
+                Age
+            </th>
         </tr>
         </thead>
         <tbody>
         {{#each sortArr as item | orderBy:sortField:reverse}}
         <tr>
-            <td> index{{$index+1}}</td>
+            <td>{{$index+1}}.</td>
             <td>{{item.name}}</td>
             <td>{{item.phone}}</td>
             <td>{{item.age}}</td>
@@ -84,8 +102,8 @@
         reverse: false
     };
 
-    var render = diglett.compile('#tpl');
 
+    var render = diglett.compile('#tpl');
     $('#content').html(render(data));
 
 
@@ -109,6 +127,8 @@
         data.reverse = !data.reverse;
         $('#content').empty().html(render(data));
     });
+
+
 </script>
 </body>
 </html>
