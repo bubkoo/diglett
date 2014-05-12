@@ -245,17 +245,10 @@
                                         arg = '"' + arg + '"';
                                     }
                                 }
-                                return arg;//.replace(/'/g, "\'").replace(/\"/g, '"');
+                                return arg;
                             };
 
                         while (filterGroup = filterGroups.shift()) {
-                            // 替换单引号或双引号中的特殊值 : | .
-//                            filterGroup = filterGroup.replace(reg, function (input, quote, param) {
-//                                return param
-//                                    .replace(/:/g, '\u00A4')
-//                                    .replace(/\|/g, '\u00AA')
-//                                    .replace(/\./g, '\u00A7');
-//                            });
                             // 得到过滤器的参数
                             args = filterGroup.split(/\s*:\s*/g);
                             filter = args.shift();
@@ -265,19 +258,6 @@
                                 buffer += ', ' + handleArg(arg);
                             }
                             value = '__filter["' + filter + '"].call(this,' + buffer + ')';
-
-
-//                            filter = args.shift();
-//
-//                            buffer = value;
-//                            while (arg = args.shift()) {
-//                                buffer += ',"' + arg
-//                                    .replace(/\u00A4/g, ':')
-//                                    .replace(/\u00AA/g, '|')
-//                                    .replace(/'/g, "\'")
-//                                    .replace(/\"/g, '"') + '"';
-//                            }
-//                            value = '__filter["' + filter + '"].call(this,' + buffer + ')';
                         }
                     }
                     return value;
