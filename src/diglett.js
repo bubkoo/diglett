@@ -36,7 +36,7 @@
                 cached;
             if (useCache) {
                 if (cached = Template.cache[tpl]) {
-                    return cached.render(data);
+                    return cached(data);
                 }
             }
             cached = that.parse(tpl);
