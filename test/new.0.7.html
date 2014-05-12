@@ -62,8 +62,7 @@
 {{ str |  uppercase   }}
 
 <h2>Include 子模板</h2>
-{{#include subtpl subdata}}
-
+{{#include '#subtpl' subdata}}
 <h2>高级filter示例</h2>
 <h3>日期时间</h3>
 {{ datetime |    datetime  :  "ddd yyyy年MM-dd HH:mm:ss":asdsad:asdasd}}
@@ -145,7 +144,7 @@
             Age
         </td>
     </tr>
-    {{#each sortArr2 as item | orderBy   :    sortfield  :  reverse    }}
+    {{#each sortArr2 as item | orderBy : sortfield : reverse }}
     <tr>
         <td>{{item.name}}</td>
         <td>{{item.phone}}</td>
@@ -168,7 +167,7 @@
             Age
         </td>
     </tr>
-    {{#each sortArr2 as item | orderBy  :   name  :  -phone}}
+    {{#each sortArr2 as item | orderBy : name : -phone}}
     <tr>
         <td>{{item.name}}</td>
         <td>{{item.phone}}</td>
@@ -192,7 +191,7 @@
             Age
         </td>
     </tr>
-    {{#each sortArr2 as item | orderBy  :   cusOrderBy}}
+    {{#each sortArr2 as item | orderBy : cusOrderBy}}
     <tr>
         <td>{{item.name}}</td>
         <td>{{item.phone}}</td>
@@ -216,7 +215,7 @@
             Age
         </td>
     </tr>
-    {{#each sortArr2 as item | filter :   name ^ M   :   phone ^ 4}}
+    {{#each sortArr2 as item | filter : name ^ M : phone ^ 4}}
     <tr>
         <td>{{item.name}}</td>
         <td>{{item.phone}}</td>
@@ -288,7 +287,27 @@
 
 
     function complied(__, __method, __filter) {
-
+        'use strict';
+        __ = __ || {};
+        __filter = __filter || {};
+        __method = __method || {};
+        var __out = '';
+        var items = __.items, item = __.item, date = __.date, earnings = __.earnings, pager = __.pager;
+        __out += '<tbody>';
+        __method["each"](items, function (item, $index, $even, $odd, $first, $last) {
+            __out += '<tr><td>';
+            __out += __filter["datetime"].call(this, item.date, __method["getFilterArg"](__, "yyyy-MM-dd"));
+            __out += '</td><td><strong>';
+            __out += __filter["currency"].call(this, item.earnings);
+            __out += '</strong></td></tr>';
+        });
+        __out += '</tbody>';
+        __out += __method["include"](#tplPager, pager
+    )
+        ;
+        ;
+        __out += '';
+        return __out;
     }
 </script>
 </body>

@@ -367,7 +367,7 @@
                 .replace(this.rInclude, function (input, tpl, data) {
                     // get variable
                     if (tpl.match(/^(['"])#[\w:\-\.]+\1$/igm)) {
-                        tpl = tpl.replace(/['"]/g, '');
+                        //tpl = tpl.replace(/['"]/g, '');
                     } else {
                         addVarible(tpl);
                     }
