@@ -287,27 +287,7 @@
 
 
     function complied(__, __method, __filter) {
-        'use strict';
-        __ = __ || {};
-        __filter = __filter || {};
-        __method = __method || {};
-        var __out = '';
-        var items = __.items, item = __.item, date = __.date, earnings = __.earnings, pager = __.pager;
-        __out += '<tbody>';
-        __method["each"](items, function (item, $index, $even, $odd, $first, $last) {
-            __out += '<tr><td>';
-            __out += __filter["datetime"].call(this, item.date, __method["getFilterArg"](__, "yyyy-MM-dd"));
-            __out += '</td><td><strong>';
-            __out += __filter["currency"].call(this, item.earnings);
-            __out += '</strong></td></tr>';
-        });
-        __out += '</tbody>';
-        __out += __method["include"](#tplPager, pager
-    )
-        ;
-        ;
-        __out += '';
-        return __out;
+
     }
 </script>
 </body>

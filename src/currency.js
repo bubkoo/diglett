@@ -105,7 +105,7 @@
         decimal = opts.decimal;
 
         // check the fraction length
-        precision = Math.min((numStr.split(decimal)[1] || '').length, precision);
+        // precision = Math.min((numStr.split(decimal)[1] || '').length, precision);
 
         // eg. 6.156 -> 6.16
         var pow = Math.pow(10, precision);
