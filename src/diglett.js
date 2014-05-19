@@ -136,7 +136,7 @@
                 }
             },
 
-            throw: _throw
+            'throw': _throw
         },
 
         filter: {
