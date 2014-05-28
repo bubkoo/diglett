@@ -48,7 +48,7 @@
             datetime.options);
 
         // ref: http://www.regexper.com/#%2F%22%5B%5E%22%5D*%22%7C'%5B%5E'%5D*'%7C%5Cb(%3F%3Ad%7B1%2C4%7D%7Cm%7B1%2C4%7D%7Cyy(%3F%3Ayy)%3F%7C(%5BhHMstT%5D)%5C1%3F%7C%5BlLZ%5D)%5Cb%2F
-        return opts.format.replace(/"[^"]*"|'[^']*'|\b(?:d{1,4}|m{1,4}|yy(?:yy)?|([hHMstT])\1?|[lLZ])\b/g, function ($0) {
+        return opts.format.replace(/"[^"]*"|'[^']*'|(?:d{1,4}|m{1,4}|yy(?:yy)?|([hHMstT])\1?|[lLZ])/g, function ($0) {
             switch ($0) {
                 case 'd':
                     return date.getDate();
