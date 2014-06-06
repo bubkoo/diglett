@@ -318,6 +318,9 @@
                 field;
             for (; i < len; i++) {
                 field = sortFields[i];
+                if (!field) {
+                    continue;
+                }
                 flag = field.charAt(0);
                 if (flag === '+' || flag === '-') {
                     reverse = flag === '-' || reverse;
