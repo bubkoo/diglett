@@ -2,8 +2,40 @@
 
 Diglett 是一个友好的前端（JavaScript）模板引擎，用来将数据和模板组合出最终的 HTML。模板本身比较轻量级，除了支持常用的模板语法之外，开发者还可以扩展自己的语法；此外，Diglett 还支持类似 Angular 的过滤器。
 
+- [快速开始](#quick-start)
+  - [引用 Diglett](#add-diglett-script)
+  - [编写模板](#build-template)
+  - [渲染模板](#render-template)
+- [模板语法](#grammar)
+  - [变量替换 {{ 变量 }}](#grammar-placehoder)
+  - [流程控制](#grammar-logic)
+    - [if](#grammar-logic-if)
+    - [if-else](#grammar-logic-if-else)
+    - [if-elseif-else](#grammar-logic-if-elseif-else)
+    - [ifnot](grammar-logic-ifnot)
+  - [循环遍历](#grammar-traverse)
+  - [子模板](#grammar-include)
+  - [模板注释](#grammar-annotation)
+  - [内联](#grammar-inline)
+- [过滤器](#filter)
+ - [语法](#filter-grammar)
+ - [内置过滤器](#filter-native)
+   - [html HTML 转义](#filter-native-html)
+   - [lowercase 小写](#filter-native-lower)
+   - [uppercase 大写](#filter-native-upper)
+ - [外置过滤器](#filter-ext)
+   - [limitTo 限制字符串或数组的长度](#filter-ext-limitto)
+   - [orderBy 排序](#filter-ext-orderby)
+   - [datetime 格式化日期时间](#filter-ext-datetime)
+   - [number 格式化数字](#filter-ext-number)
+   - [currency 格式化货币](#filter-ext-currency)
+   - [filter](#filter-ext-filter)
+- [API 参考](#api)
+      
+<a name="quick-start" id="quick-start"></a>
 ## 快速开始
 
+<a name="add-diglett-script" id="add-diglett-script"></a>
 ### 引用 Diglett
 
 在页面中引入 diglett：
@@ -14,6 +46,7 @@ Diglett 是一个友好的前端（JavaScript）模板引擎，用来将数据�
 
 也可以通过支持 CMD（[SeaJS](http://seajs.org/)）或 AMD（[RequireJS](http://requirejs.org/)）规范的模块加载器来加载 Diglett。
 
+<a name="build-template" id="build-template"></a>
 ### 编写模板
 
 使用一个 `type=”text/template”` 的 `script` 标签存放模板：
@@ -29,6 +62,7 @@ Diglett 是一个友好的前端（JavaScript）模板引擎，用来将数据�
 </script>
 ```
 
+<a name="render-template" id="render-template"></a>
 ### 渲染模板
 
 指定一个容器来存放渲染后的模板
@@ -51,8 +85,10 @@ var data = {
 var html = diglett('#tpl', data);
 document.getElementById('container').innerHTML = html;
 ```
-
+<a name="grammar" id="grammar"></a>
 ## 模板语法
+
+<a name="grammar-placehoder" id="grammar-placehoder"></a>
 ### 变量替换 {{ 变量 }}
 
 支持简单的变量替换
@@ -67,8 +103,10 @@ var data = {
 var html = diglett(tpl, data);
 ```
 
+<a name="grammar-logic" id="grammar-logic"></a>
 ### 流程控制
 
+<a name="grammar-logic-if" id="grammar-logic-if"></a>
 #### if 语句
 
 ```js
@@ -82,6 +120,7 @@ var data = {
 var html = diglett(tpl, data);
 ```
 
+<a name="grammar-logic-if-else" id="grammar-logic-if-else"></a>
 #### if-else 语句
 
 ```js
@@ -95,6 +134,7 @@ var data = {
 var html = diglett(tpl, data);
 ```
 
+<a name="grammar-logic-if-elseif-else" id="grammar-logic-if-elseif-else"></a>
 #### if-elseif-else 语句
 
 ```js
@@ -114,6 +154,7 @@ var data = {
 var html = diglett(tpl, data);
 ```
 
+<a name="grammar-logic-ifnot" id="grammar-logic-ifnot"></a>
 #### ifnot 语句
 
 ```js
@@ -131,6 +172,7 @@ var data = {
 var html = diglett(tpl, data);
 ```
 
+<a name="grammar-traverse" id="grammar-traverse"></a>
 ### 循环遍历
 
 可以对数组和对象进行循环遍历，遍历对象时相当于 `for-in` 循环，而且进行了 `hasOwnProperty` 判断，只会列举本地属性。
@@ -171,6 +213,7 @@ var data = {
 };
 ```
 
+<a name="grammar-include" id="grammar-include"></a>
 ### 子模板
 
 - `{{#include subtpl subdata}}`
@@ -188,28 +231,32 @@ var data = {
 
   `#subtpl` 为定义在页面中的模板的 ID
 
-
+<a name="grammar-annotation" id="grammar-annotation"></a>
 ### 模板注释
 
 {{!--这里是注释，将不会被渲染到页面上--}}
 
+<a name="grammar-inline" id="grammar-inline"></a>
 ### 内联
 
 由于这里的 `{{` 和 `}}` 被当做了语法结构，所以需要在页面上显示 `{{}}` 时需要用内联语法：
 
 `{{// 内联显示}}`
 
-
+<a name="filter" id="filter"></a>
 ## 过滤器
 
+<a name="filter-grammar" id="filter-grammar"></a>
 ### 语法
 
 过滤器的语法结构如下，可以同时指定多个过滤器，可以给过滤器传递参数：
 
 `{{ value | filter1 | filter2:arg1:arg2...  ... }}`
 
+<a name="filter-native" id="filter-native"></a>
 ### 内置过滤器
 
+<a name="filter-native-html" id="filter-native-html"></a>
 #### html
 
 转义 html 标签中的 `<`、`>`、`"`、`\` 和 `&`
@@ -223,6 +270,7 @@ var data = { value: '<span>这里是HTML<\span>' };
 var result = diglett(tpl, data);
 ```
 
+<a name="filter-native-lower" id="filter-native-lower"></a>
 #### lowercase 转换为全小写
 
 ```js
@@ -232,6 +280,7 @@ var data = { value: 'HELLO WORLD' };
 var result = diglett(tpl, data);
 ```
 
+<a name="filter-native-upper" id="filter-native-upper"></a>
 #### uppercase 转换为全大写
 
 ```js
@@ -241,6 +290,7 @@ var data = { value: 'hello world' };
 var result = diglett(tpl, data);
 ```
 
+<a name="filter-ext" id="filter-ext"></a>
 ### 外置过滤器
 
 使用外置过滤器前，需要在页面中引入下面三个 JS 文件：
@@ -251,6 +301,7 @@ var result = diglett(tpl, data);
 <script src="registerFilter.js"></script>
 ```
 
+<a name="filter-ext-limitto" id="filter-ext-limitto"></a>
 #### limitTo 限制字符串或数组的长度
 
 限制字符串长度：`{{longStr | limitTo : 4 }}`
@@ -263,6 +314,7 @@ var result = diglett(tpl, data);
 {{/each}}
 ```
 
+<a name="filter-ext-orderby" id="filter-ext-orderby"></a>
 #### orderBy 排序
 
 **简单数组**
@@ -337,6 +389,8 @@ objArr: [
     {{/each}}
 </table>
 ```
+
+<a name="filter-ext-datetime" id="filter-ext-datetime"></a>
 #### datetime
 
 `{{ value | datetime:"yyyy-MM-dd HH:mm:ss" }}`
@@ -367,6 +421,7 @@ objArr: [
 
 **注意**：月份名称和星期名称可以在引入 `datetime.js` 后，调用 `datetime.options` 来修改
 
+<a name="filter-ext-number" id="filter-ext-number"></a>
 #### number
 
 `{{ value | number:precision:grouping:thousand:decimal}}`
@@ -377,6 +432,7 @@ objArr: [
 - thousand - 分组的风格符，默认为 `,`
 - decimal - 小数点符号，默认为 `.`
 
+<a name="filter-ext-currency" id="filter-ext-currency"></a>
 #### currency
 
 `{{ value | currency:currencySymbol:precision:grouping:thousand:decimal:format}}`
@@ -388,6 +444,7 @@ objArr: [
 - decimal - 小数点符号，默认为 `.`
 - format - 货币格式，默认为 `%s%v`，%s = 货币符号, %v = 货币值
 
+<a name="filter-ext-filter" id="filter-ext-filter"></a>
 #### filter 
 
 `{{ objArray | filter:[字段][比较符][值]}}`
@@ -428,6 +485,7 @@ objArr: [
 </table>
 ```
 
+<a name="api" id="api"></a>
 ## API 参考
 
 - diglett(source, data)
