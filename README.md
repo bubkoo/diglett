@@ -307,6 +307,7 @@ objArr: [
 语法：`{{#each objArr as item | orderBy:(+/-)排序的字段1:(+/-)排序字段2...:reverse }}`
 
 **注意：**
+
 1. 排序字段前面的 `+` 和 `-` 分别表示升序和降序，省略时默认为升序
 2. 最后一个参数 `reverse` 为 `true` 时，表示对其紧靠的排序字段进行降序排列，否则进行升序排列
 3. `reverse` 的使用方式[请参看](https://github.com/bubkoo/diglett/blob/master/test/sortable.html)
@@ -426,6 +427,68 @@ objArr: [
     {{/each}}
 </table>
 ```
+
+## API 参考
+
+- diglett(source, data)
+  
+  渲染模板
+  
+  参数：
+  
+  - `source`: 模板字符串或模板 ID
+  - `data`: 模板数据
+
+  返回值：生成后的 HTML
+
+- diglett.options
+
+  全局设置：
+  
+  - `diglett.options.cache`: 是否缓存编译的模板，默认为 `true`
+  - `diglett.options.uglify`: 是否去除生成的 HTML 中多余的空格和注释，默认为 `true`
+
+- diglett.compile(source, options)
+
+  编译模板
+
+  参数：
+  
+  - `source`: 模板字符串或模板 ID
+  - `options`: 选项，参看 `diglett.options`
+  
+  返回值：一个 `render` 函数，调用 `render(data)` 生成最后的 HTML
+
+- diglett.render(source, data, options)
+
+  渲染模板
+
+  参数：
+  
+  - `source`: 模板字符串或模板 ID
+  - `data`: 模板数据
+  - `options`: 选项，参看 `diglett.options`
+  
+  返回值：生成后的 HTML
+
+- diglett.registerFilter(filterName, fn, overwrite)
+
+  注册自定义过滤器
+
+  参数：
+  
+  - `filterName`: 过滤器名称
+  - `fn`: 过滤器方法，参数顺序与使用时的参数顺序相同
+  - `overwrite`: 是否覆盖重名的过滤器
+
+- diglett.removeFilter(filterName)
+
+  删除自定义过滤器
+  
+  参数：
+  
+  - `filterName`: 过滤器名称
+
 
 
 
