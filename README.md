@@ -172,3 +172,86 @@ var data = {
 ```
 
 ## 过滤器
+
+### 语法
+
+过滤器的语法结构如下，可以同时指定多个过滤器，可以给过滤器传递参数：
+
+`{{ value | filter1 | filter2:arg1:arg2...  ... }}`
+
+### 内置过滤器
+
+#### html
+
+转义 html 标签中的 `<`、`>`、`"`、`\` 和 `&`
+
+示例：
+
+```js
+var tpl = '{{ value | html }}';
+var data = { value: '<span>这里是HTML<\span>' };
+
+var result = diglett(tpl, data);
+```
+
+#### lowercase 转换为全小写
+
+```js
+var tpl = '{{ value | lowercase }}'
+var data = { value: 'HELLO WORLD' };
+
+var result = diglett(tpl, data);
+```
+
+#### uppercase 转换为全大写
+
+```js
+var tpl = '{{ value | uppercase }}'
+var data = { value: 'hello world' };
+
+var result = diglett(tpl, data);
+```
+
+### 外置过滤器
+
+使用外置过滤器前，需要在页面中引入下面三个 JS 文件：
+
+```html
+<script src="currency.js"></script> // 需要使用货币过滤器时引入
+<script src="datetime.js"></script> // 需要日期时间格式化时候引入
+<script src="registerFilter.js"></script>
+```
+
+#### limitTo 限制字符串或数组的长度
+
+限制字符串长度：`{{longStr | limitTo : 4 }}`
+
+限制数组长度：
+
+```tpl
+{{#each list | limitTo : 4 as item }}
+<li>{{ item }}</li>
+{{/each}}
+```
+
+#### orderBy 排序
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
