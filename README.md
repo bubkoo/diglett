@@ -18,7 +18,7 @@ Diglett 是一个友好的前端（JavaScript）模板引擎，用来将数据�
 
 使用一个 `type=”text/template”` 的 `script` 标签存放模板：
 
-```txt
+```html
 <script id="tpl" type="text/template">
 <h1>{{ title }}</h1>
 <ul>
@@ -244,14 +244,14 @@ var data = { arr: [8, 3, 9, 6, 7, 5, 1, 2, 4] };
 
 升序(orderBy:+)：
 
-```tpl
+```html
 {{#each arr as item|orderBy:+}}
 {{item}}
 {{/each}}
 ```
 降序(orderBy:-)：
 
-```tpl
+```html
 {{#each arr as item|orderBy:-}}
 {{item}}
 {{/each}}
