@@ -122,7 +122,6 @@
 
         var
             out = [],
-            rField = /(\S+?)\s*([>=<^]{1,2})\s*(.+)/g,
             field,
             operator,
             value,
@@ -131,7 +130,6 @@
             matches;
 
         for (; i < len; i++) {
-//            matches = rField.exec(expressions[i]);
             matches = expressions[i].match(/(\S+?)\s*([>=<^]{1,2})\s*(.+)/);
             if (matches) {
                 field = matches[1];

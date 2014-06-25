@@ -171,6 +171,35 @@ var data = {
 };
 ```
 
+### 子模板
+
+- `{{#include subtpl subdata}}`
+
+  `subtpl` 为数据中的模板字符串，`subdata` 为子模板的数据，例如：
+
+  ``` js
+  var data = {
+      subtpl: 'Hello, {{name}}'
+      subdata: {name: 'Diglett'}
+  };
+  ```
+
+- `{{#include '#subtpl' subdata}}`
+
+  `#subtpl` 为定义在页面中的模板的 ID
+
+
+### 模板注释
+
+{{!--这里是注释，将不会被渲染到页面上--}}
+
+### 内联
+
+由于这里的 `{{` 和 `}}` 被当做了语法结构，所以需要在页面上显示 `{{}}` 时需要用内联语法：
+
+`{{// 内联显示}}`
+
+
 ## 过滤器
 
 ### 语法
@@ -334,16 +363,69 @@ objArr: [
 - `L` -毫秒数，只保留两位
 - `tt` - 12 小时制中的 "am"、"pm"
 - `TT` - 12 小时制中的 "AM"、"PM"
+
 **注意**：月份名称和星期名称可以在引入 `datetime.js` 后，调用 `datetime.options` 来修改
 
 #### number
 
-`{{ value | number:}}`
+`{{ value | number:precision:grouping:thousand:decimal}}`
+
+参数说明：
+- precision - 浮点数的精度，默认为 `0`
+- grouping - 分组长度，默认为 `3`
+- thousand - 分组的风格符，默认为 `,`
+- decimal - 小数点符号，默认为 `.`
 
 #### currency
 
+`{{ value | currency:currencySymbol:precision:grouping:thousand:decimal:format}}`
 
+参数说明：
+- currencySymbol - 货币符号，默认为 `$`
+- grouping - 分组长度，默认为 `3`
+- thousand - 分组的风格符，默认为 `,`
+- decimal - 小数点符号，默认为 `.`
+- format - 货币格式，默认为 `%s%v`，%s = 货币符号, %v = 货币值
 
+#### filter 
+
+`{{ objArray | filter:[字段][比较符][值]}}`
+
+参数由三部分构成：字段、比较符、值
+
+支持的比较符：
+- `>` 大于
+- `>=` 大于等于
+- `<` 小于
+- `<=` 小于等于
+- `==` 等于
+- `<>` 不等于
+- `^` 包含
+
+例如：筛选出名字包含 `M` 并且电话包含 `4` 的子数组
+
+```html
+<table style="border:1px solid #ddd">
+    <tr>
+        <td style="width: 80px">
+            Name
+        </td>
+        <td style="width: 140px">
+            Phone Number
+        </td>
+        <td style="width: 40px">
+            Age
+        </td>
+    </tr>
+    {{#each objArr as item | filter : name ^ M : phone ^ 4}}
+    <tr>
+        <td>{{item.name}}</td>
+        <td>{{item.phone}}</td>
+        <td>{{item.age}}</td>
+    </tr>
+    {{/each}}
+</table>
+```
 
 
 
