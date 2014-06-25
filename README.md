@@ -18,7 +18,7 @@ Diglett 是一个友好的前端（JavaScript）模板引擎，用来将数据�
 
 使用一个 `type=”text/template”` 的 `script` 标签存放模板：
 
-```html
+```txt
 <script id="tpl" type="text/template">
 <h1>{{ title }}</h1>
 <ul>
@@ -228,7 +228,7 @@ var result = diglett(tpl, data);
 
 限制数组长度：
 
-```tpl
+```txt
 {{#each list | limitTo : 4 as item }}
 <li>{{ item }}</li>
 {{/each}}
@@ -236,11 +236,77 @@ var result = diglett(tpl, data);
 
 #### orderBy 排序
 
+**简单数组**
 
+```js
+var data = { arr: [8, 3, 9, 6, 7, 5, 1, 2, 4] };
+```
 
+升序(orderBy:+)：
 
+```tpl
+{{#each arr as item|orderBy:+}}
+{{item}}
+{{/each}}
+```
+降序(orderBy:-)：
 
+```tpl
+{{#each arr as item|orderBy:-}}
+{{item}}
+{{/each}}
+```
+**注意：**`+` 表示升序，`-` 表示降序，符号省略时默认为升序
 
+**对象数组**
+
+示例数据：
+```js
+var data = {
+reverse: true,
+objArr: [
+	{name: 'Adam', phone: '555-5678', age: 35},
+    {name: 'Julie', phone: '555-8765', age: 29},
+    {name: 'Mike', phone: '555-4321', age: 21},
+    {name: 'Mike', phone: '555-2321', age: 21},
+    {name: 'Mike', phone: '555-6321', age: 21},
+    {name: 'Mary', phone: '555-9876', age: 19},
+    {name: 'John', phone: '555-1212', age: 10}]
+};
+```
+
+语法：`{{#each objArr as item | orderBy:(+/-)排序的字段1:(+/-)排序字段2...:reverse }}`
+
+**注意：**
+1. 排序字段前面的 `+` 和 `-` 分别表示升序和降序，省略时默认为升序
+2. 最后一个参数 `reverse` 为 `true` 时，表示对其紧靠的排序字段进行降序排列，否则进行升序排列
+3. `reverse` 的使用方式[请参看](https://github.com/bubkoo/diglett/blob/master/test/sortable.html)
+
+ 
+将示例数据按 `name` 升序，`phone` 降序：
+
+```html
+<table style="border:1px solid #ddd">
+    <tr>
+        <td style="width: 80px">
+            Name
+        </td>
+        <td style="width: 140px">
+            Phone Number
+        </td>
+        <td style="width: 40px">
+            Age
+        </td>
+    </tr>
+    {{#each objArr as item | orderBy : name : -phone}}
+    <tr>
+        <td>{{item.name}}</td>
+        <td>{{item.phone}}</td>
+        <td>{{item.age}}</td>
+    </tr>
+    {{/each}}
+</table>
+```
 
 
 
