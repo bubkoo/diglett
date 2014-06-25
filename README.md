@@ -6,6 +6,7 @@ Diglett 是一个友好的前端（JavaScript）模板引擎，用来将数据�
   - [引用 Diglett](#add-diglett-script)
   - [编写模板](#build-template)
   - [渲染模板](#render-template)
+
 - [模板语法](#grammar)
   - [变量替换 {{ 变量 }}](#grammar-placehoder)
   - [流程控制](#grammar-logic)
@@ -17,19 +18,24 @@ Diglett 是一个友好的前端（JavaScript）模板引擎，用来将数据�
   - [子模板](#grammar-include)
   - [模板注释](#grammar-annotation)
   - [内联](#grammar-inline)
+
 - [过滤器](#filter)
  - [语法](#filter-grammar)
  - [内置过滤器](#filter-native)
+   
    - [html HTML 转义](#filter-native-html)
    - [lowercase 小写](#filter-native-lower)
    - [uppercase 大写](#filter-native-upper)
+ 
  - [外置过滤器](#filter-ext)
+   
    - [limitTo 限制字符串或数组的长度](#filter-ext-limitto)
    - [orderBy 排序](#filter-ext-orderby)
    - [datetime 格式化日期时间](#filter-ext-datetime)
    - [number 格式化数字](#filter-ext-number)
    - [currency 格式化货币](#filter-ext-currency)
    - [filter](#filter-ext-filter)
+
 - [API 参考](#api)
       
 <a name="quick-start" id="quick-start"></a>
