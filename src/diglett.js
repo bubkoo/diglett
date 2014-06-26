@@ -82,8 +82,8 @@
                             even = false;
                             odd = true;
                         }
-                        index === 0 && (first = true);
-                        index === (len - 1) && (last = true);
+                        first = index === 0;
+                        last = index === (len - 1);
                     };
                 if (isArray(data)) {
                     for (i = 0, len = data.length; i < len; i++) {
