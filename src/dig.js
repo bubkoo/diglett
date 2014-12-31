@@ -10,20 +10,33 @@
     // create a local object, to be exported or
     // attached to the global object later
     function diglett(source, data) {
-        try {
-            var engine = Template.cache[source];
-            return engine || new Template(options).parse(source);
-        } catch (error) {
 
-        }
     }
 
-    // current version
-    diglett.version = '0.0.7';
+    diglett.compile = function (source) {
+        try {
+            var cache = Template.cache;
+            if (!cache) {
+                cache = Template.cache = {};
+            }
 
-    diglett.compile = function () {};
+            var engine = cache[source];
+            if (!engine) {
+                engine = new Template().parse(source);
+            }
+            return engine;
+        } catch (error) {
+            global.console &&
+            console.log &&
+            console.log('[compile error] ' + error);
+        }
+    };
 
     diglett.render = function () {};
+
+    // current version
+    diglett.version = '0.0.1';
+
 
     // Exports
     // -------
