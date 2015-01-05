@@ -21,7 +21,7 @@ Template.prototype = {
 
     _unShell: function (source) {},
 
-    __toNative: function (source) {},
+    _toNative: function (source) {},
 
     parse: function (source) {
         var instance = this;
@@ -46,7 +46,7 @@ Template.prototype = {
             });
         }
 
-        source = instance._unshell(source);
+        source = instance._unShell(source);
         source = instance._toNative(source);
 
         var fn = new Function('__, __method, __filter', source);
@@ -64,3 +64,30 @@ Template.prototype = {
 
 // Helpers
 // -------
+
+function trim(str) {
+    str = str.replace(/^\s+/g, '');
+    for (var i = str.length - 1; i >= 0; i--) {
+        if (/\S/.test(str.charAt(i))) {
+            str = str.substring(0, i + 1);
+            break;
+        }
+    }
+    return str;
+}
+
+var nativeIndexOf = Array.prototype.indexOf;
+
+function indexOf(array, item) {
+    if (nativeIndexOf) {
+        return nativeIndexOf.call(array, item);
+    } else {
+        for (var i = 0, len = array.length; i < len; i++) {
+            if (array[i] === item) {
+                return i;
+            }
+        }
+    }
+
+    return -1;
+}
