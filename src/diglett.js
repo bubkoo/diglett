@@ -388,7 +388,7 @@
             return source;
         },
 
-        _toNative: function (source) {
+        toNative: function (source) {
             var uglify = this.options.uglify,
                 buffer = "'use strict';"; // use strict mode
 
@@ -447,7 +447,7 @@
             }
 
             source = that._unshell(source);
-            source = that._toNative(source);
+            source = that.toNative(source);
 
             that._render = new Function('__, __method, __filter', source);
             that.render = function (data, options) {

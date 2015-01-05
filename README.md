@@ -1,6 +1,8 @@
 # diglett
 
-Diglett 是一个友好的前端（JavaScript）模板引擎，用来将数据和模板组合出最终的 HTML。模板本身比较轻量级，除了支持常用的模板语法之外，开发者还可以扩展自己的语法；此外，Diglett 还支持类似 Angular 的过滤器。
+> Diglett 是一个简单的前端（JavaScript）模板引擎，用来将数据和模板组合出最终的 HTML。除了
+除了支持常用的模板语法之外，开发者还可以扩展自己的语法；此外，Diglett 还支持类似 AngularJS
+的过滤器。
 
 - [快速开始](#quick-start)
   - [引用 Diglett](#add-diglett-script)

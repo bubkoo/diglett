@@ -1,8 +1,3 @@
-var defaults = {
-    cached: true,
-    debug: true
-};
-
 function Template(options) {
     var instance = this;
     instance.options = options;
@@ -36,7 +31,17 @@ Template.prototype = {
         source = source
             // each expression
             .replace(regex.eachStart, function (input, expression) {
+                var index = expression.indexOf(' ');
+                var key = '$index';
+                var value = '$value';
+                var data;
 
+                if (index) {
+                    data = expression.substr(0, index);
+                    var options = expression.substr(index + 1);
+                } else {
+
+                }
             })
             .replace(regex.eachEnd, '<% }); %>')
             // if expression
@@ -112,19 +117,50 @@ Template.prototype = {
 
 // Helpers
 // -------
+var helpers = {
+    each: function (data, callback) {
+        var i, key, length;
+        var even, odd, first, last;
 
-function trim(str) {
-    str = str.replace(/^\s+/g, '');
-    for (var i = str.length - 1; i >= 0; i--) {
-        if (/\S/.test(str.charAt(i))) {
-            str = str.substring(0, i + 1);
-            break;
+        function flag(index, length) {
+            if ((index + 1) % 2 === 0) {
+                even = true;
+                odd = false;
+            } else {
+                even = false;
+                odd = true;
+            }
+            first = index === 0;
+            last = index === (length - 1);
+        }
+
+        if (isArray(data)) {
+            for (i = 0, length = data.length; i < length; i++) {
+                flag(i, length);
+                callback.call(data, data[i], i, even, odd, first, last);
+            }
+        } else {
+            length = objectLength(data);
+            i = 0;
+            for (key in data) {
+                if (hasOwn.call(data, key)) {
+                    flag(i, length);
+                    callback.call(data, data[key], key, even, odd, first, last);
+                    i += 1;
+                }
+            }
         }
     }
-    return str;
-}
+};
 
-var nativeIndexOf = Array.prototype.indexOf;
+// Utils
+// -----
+var toString = Object.prototype.toString;
+var hasOwn = Object.prototype.hasOwnProperty;
+var arrayPrototype = Array.prototype;
+var nativeIndexOf = arrayPrototype.indexOf;
+var nativeIsArray = arrayPrototype.isArray;
+
 function indexOf(array, item) {
     if (nativeIndexOf) {
         return nativeIndexOf.call(array, item);
@@ -137,4 +173,48 @@ function indexOf(array, item) {
     }
 
     return -1;
+}
+
+function isArray(obj) {
+    if (nativeIsArray) {
+        return nativeIsArray.call(obj);
+    }
+    return '[object Array]' === toString.call(obj);
+}
+
+function trim(str) {
+    str = str.replace(/^\s+/g, '');
+    for (var i = str.length - 1; i >= 0; i--) {
+        if (/\S/.test(str.charAt(i))) {
+            str = str.substring(0, i + 1);
+            break;
+        }
+    }
+    return str;
+}
+
+var DONT_ENUM = "propertyIsEnumerable,isPrototypeOf,hasOwnProperty,toLocaleString,toString,valueOf,constructor".split(",");
+for (var i in {
+    toString: 1
+}) {
+    DONT_ENUM = false;
+}
+
+Object.keys = Object.keys || function (obj) {
+    var result = [];
+    for (var key in obj) if (hasOwn.call(obj, key)) {
+        result.push(key)
+    }
+    if (DONT_ENUM && obj) {
+        for (var i = 0; key = DONT_ENUM[i++];) {
+            if (hasOwn.call(obj, key)) {
+                result.push(key);
+            }
+        }
+    }
+    return result;
+};
+
+function objectLength(obj) {
+    return Object.keys(obj).length;
 }
