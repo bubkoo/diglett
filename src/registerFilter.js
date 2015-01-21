@@ -1,9 +1,4 @@
-;
 (function (global) {
-
-    // Helpers
-    // ----------------
-
     var toString = Object.prototype.toString;
 
     function isFunction(val) {

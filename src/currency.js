@@ -1,13 +1,3 @@
-/*
- *
- * currency.js v0.0.6
- * by bubkoo@163.com
- *
- * MIT license
- *
- */
-
-
 (function (global) {
 
     // create a local object, to be exported or add to global object later
