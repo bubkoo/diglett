@@ -1,12 +1,3 @@
-/**
- *
- * diglett.js v0.0.7
- *
- * by bubkoo@163.com
- *
- * MIT license
- *
- */
 ;
 (function (global) {
 
@@ -592,6 +583,4 @@
     } else {
         global.diglett = diglett;
     }
-
-
 })(this);

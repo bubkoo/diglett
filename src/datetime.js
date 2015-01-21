@@ -209,6 +209,4 @@
         // attach datetime to global
         global['datetime'] = datetime;
     }
-
-
 })(this);
